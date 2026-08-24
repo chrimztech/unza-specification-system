@@ -1,0 +1,5 @@
+# Created at 2026-08-20T10:42:50.377
+Boot Manifest-JAR contains absolute paths in classpath 'F:\unza-specification-system\backend\target\test-classes'
+Hint: <argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
+'other' has different root
+

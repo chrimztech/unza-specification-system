@@ -1,0 +1,11 @@
+package zm.unza.cict.specification.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import zm.unza.cict.specification.domain.SpecProfile;
+
+import java.util.List;
+import java.util.UUID;
+
+public interface SpecProfileRepository extends JpaRepository<SpecProfile, UUID> {
+    List<SpecProfile> findByCategoryId(UUID categoryId);
+}
