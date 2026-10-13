@@ -5,6 +5,7 @@ public record HrStaff(
         String fullName,
         String manNumber,
         String jobTitle,
-        String phone
+        String phone,
+        String positionLevel
 ) {
 }

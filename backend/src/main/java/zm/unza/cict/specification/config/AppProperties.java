@@ -9,7 +9,8 @@ public record AppProperties(
         Cors cors,
         Jwt jwt,
         Storage storage,
-        Hr hr
+        Hr hr,
+        Mail mail
 ) {
     public record Cors(List<String> allowedOrigins) {
     }
@@ -24,5 +25,9 @@ public record AppProperties(
         public boolean configured() {
             return loginUrl != null && !loginUrl.isBlank() && metadataUrl != null && !metadataUrl.isBlank();
         }
+    }
+
+    /** Email is opt-in: unset app.mail.enabled (or a blank spring.mail.host) means notifications stay in-app only. */
+    public record Mail(boolean enabled, String from) {
     }
 }

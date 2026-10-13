@@ -10,9 +10,10 @@ import {
   RotateCcw,
   Check,
   Undo2,
+  Paperclip,
   type LucideIcon,
 } from "lucide-react";
-import { apiGet, apiPost, ApiError } from "@/lib/api-client";
+import { apiDownload, apiGet, apiPost, apiUpload, ApiError } from "@/lib/api-client";
 import type {
   EvaluationResponse,
   PurchaseResponse,
@@ -77,7 +78,7 @@ function PipelineStepper({ status }: { status: RequestStatus }) {
   const progressPct = (Math.min(idx, 4) / 4) * 100;
 
   return (
-    <nav aria-label="Pipeline progress" className="rounded-md border border-border bg-card p-4 shadow-panel">
+    <nav aria-label="Pipeline progress" className="surface p-4">
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div
           className={`h-full rounded-full transition-all ${returned ? "bg-destructive" : "bg-primary"}`}
@@ -87,7 +88,13 @@ function PipelineStepper({ status }: { status: RequestStatus }) {
       <ol className="mt-4 grid gap-3 sm:grid-cols-4">
         {STEPS.map((s, i) => {
           const isReturnedStep = returned && i === 3;
-          const state = isReturnedStep ? "returned" : i < idx ? "done" : i === idx ? "current" : "todo";
+          const state = isReturnedStep
+            ? "returned"
+            : i < idx
+              ? "done"
+              : i === idx
+                ? "current"
+                : "todo";
           return (
             <li key={s.label}>
               <span
@@ -101,7 +108,13 @@ function PipelineStepper({ status }: { status: RequestStatus }) {
                         : "bg-muted text-muted-foreground"
                 }`}
               >
-                {state === "done" ? <Check className="size-3.5" /> : state === "returned" ? <Undo2 className="size-3.5" /> : i + 1}
+                {state === "done" ? (
+                  <Check className="size-3.5" />
+                ) : state === "returned" ? (
+                  <Undo2 className="size-3.5" />
+                ) : (
+                  i + 1
+                )}
               </span>
               <span
                 className={`mt-2 block text-sm font-medium ${state === "todo" ? "text-muted-foreground" : ""}`}
@@ -127,7 +140,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-md border border-border bg-card shadow-panel">
+    <div className="surface">
       <h2 className="flex items-center gap-2 border-b border-border px-4 py-3 font-display text-lg">
         <Icon className="size-4.5 text-muted-foreground" />
         {title}
@@ -271,6 +284,7 @@ function QuotationsPanel({
   const [amount, setAmount] = useState("");
   const [currency] = useState("ZMW");
   const [notes, setNotes] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
 
   const quotations = useQuery({
@@ -290,21 +304,48 @@ function QuotationsPanel({
     }
     setBusy(true);
     try {
+      let attachmentId: string | undefined;
+      if (file) {
+        const form = new FormData();
+        form.append("file", file);
+        form.append("kind", "quotation_document");
+        const uploaded = await apiUpload<{ id: string }>(
+          `/api/requests/${requestId}/attachments`,
+          form,
+        );
+        attachmentId = uploaded.id;
+      }
       await apiPost(`/api/requests/${requestId}/quotations`, {
         vendorName,
         amount: Number(amount),
         currency,
         notes: notes || undefined,
+        attachmentId,
       });
       toast.success("Quotation recorded");
       setVendorName("");
       setAmount("");
       setNotes("");
+      setFile(null);
       refetchQuotations();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Could not record the quotation");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function downloadQuote(attachmentId: string, fileName: string) {
+    try {
+      const { blob, filename } = await apiDownload(`/api/attachments/${attachmentId}/download`);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename ?? fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Could not open the quote document.");
     }
   }
 
@@ -329,6 +370,18 @@ function QuotationsPanel({
               <p className="mt-1 text-xs text-muted-foreground">
                 Submitted by {q.submittedBy?.fullName ?? "Unknown"} · {formatDateTime(q.createdAt)}
               </p>
+              {q.attachmentId && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    downloadQuote(q.attachmentId!, q.attachmentFileName ?? "quotation")
+                  }
+                  className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  <Paperclip className="size-3" />
+                  {q.attachmentFileName ?? "Quote document"}
+                </button>
+              )}
               {q.evaluations.length > 0 && (
                 <ul className="mt-2 space-y-1.5">
                   {q.evaluations.map((e) => (
@@ -364,6 +417,15 @@ function QuotationsPanel({
           <div className="space-y-1.5">
             <Label>Notes</Label>
             <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Vendor's quote document (optional)</Label>
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-sm file:border file:border-border file:bg-secondary file:px-3 file:py-1.5 file:text-xs file:font-medium"
+            />
           </div>
           <Button size="sm" disabled={busy} onClick={addQuotation}>
             <Plus className="mr-1.5 size-4" />
@@ -406,7 +468,9 @@ function PurchasePanel({
     enabled: canAct && status === "procurement",
   });
 
-  const passedQuotations = (quotations.data ?? []).filter((q) => q.evaluations[0]?.result === "pass");
+  const passedQuotations = (quotations.data ?? []).filter(
+    (q) => q.evaluations[0]?.result === "pass",
+  );
 
   async function recordPurchase() {
     if (!quotationId || !vendorName.trim() || !amount) {
@@ -762,8 +826,8 @@ export function ProcurementPipeline({
       <div>
         <h2 className="font-display text-xl">Procurement pipeline</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          What happens after CICT technical approval — quotations, evaluation, purchase, stores
-          and verification.
+          What happens after CICT technical approval — quotations, evaluation, purchase, stores and
+          verification.
         </p>
       </div>
 
@@ -781,12 +845,7 @@ export function ProcurementPipeline({
         canAct={isProcurement}
         onChanged={onChanged}
       />
-      <StoresPanel
-        requestId={requestId}
-        status={status}
-        canAct={isStores}
-        onChanged={onChanged}
-      />
+      <StoresPanel requestId={requestId} status={status} canAct={isStores} onChanged={onChanged} />
       <VerificationPanel
         requestId={requestId}
         status={status}

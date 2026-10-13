@@ -78,9 +78,11 @@ function HelpPage() {
       <header className="border-b border-border bg-primary text-primary-foreground">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
           <Link to="/" className="flex items-center gap-3">
-            <span className="grid size-9 place-items-center rounded-sm bg-accent font-display text-base font-bold text-accent-foreground">
-              UZ
-            </span>
+            <img
+              src="/logo.png"
+              alt="University of Zambia"
+              className="size-9 rounded-sm object-contain"
+            />
             <span className="font-display text-sm font-semibold">University of Zambia · CICT</span>
           </Link>
           <Button asChild variant="secondary" size="sm">
@@ -107,7 +109,7 @@ function HelpPage() {
           <h2 className="font-display text-2xl">The process</h2>
           <ol className="space-y-3">
             {STEPS.map((s) => (
-              <li key={s.title} className="rounded-md border border-border bg-card p-5 shadow-panel">
+              <li key={s.title} className="surface p-5">
                 <h3 className="font-display text-lg">{s.title}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{s.body}</p>
               </li>

@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import zm.unza.cict.specification.common.enums.AppRole;
 import zm.unza.cict.specification.hr.HrStaff;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -12,36 +13,33 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class RequestLifecycleIntegrationTest extends AbstractIntegrationTest {
 
     @Test
-    void requestWithoutAHelpDeskReferenceIsRejected() throws Exception {
-        HrStaff staff = freshStaff("no-ref");
+    void referenceIsGeneratedAutomaticallyAndIsUniquePerRequest() throws Exception {
+        HrStaff staff = freshStaff("auto-ref");
         String token = loginAs(staff);
 
-        mockMvc.perform(post("/api/requests?submit=false")
+        String first = mockMvc.perform(post("/api/requests?submit=false")
                         .header("Authorization", bearer(token))
                         .contentType("application/json")
                         .content("""
-                                {"title":"Missing reference"}
+                                {"title":"First"}
                                 """))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void duplicateHelpDeskReferenceIsRejected() throws Exception {
-        HrStaff staff = freshStaff("dup-ref");
-        String token = loginAs(staff);
-        String reference = "HD-TEST-" + System.nanoTime();
-
-        mockMvc.perform(post("/api/requests?submit=false")
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String second = mockMvc.perform(post("/api/requests?submit=false")
                         .header("Authorization", bearer(token))
                         .contentType("application/json")
-                        .content("{\"reference\":\"%s\",\"title\":\"First\"}".formatted(reference)))
-                .andExpect(status().isOk());
+                        .content("""
+                                {"title":"Second"}
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
 
-        mockMvc.perform(post("/api/requests?submit=false")
-                        .header("Authorization", bearer(token))
-                        .contentType("application/json")
-                        .content("{\"reference\":\"%s\",\"title\":\"Second\"}".formatted(reference)))
-                .andExpect(status().isBadRequest());
+        String firstReference = objectMapper.readTree(first).get("reference").asText();
+        String secondReference = objectMapper.readTree(second).get("reference").asText();
+        assertThat(firstReference).isNotBlank().matches("\\d{12}");
+        assertThat(secondReference).isNotBlank().isNotEqualTo(firstReference);
+        assertThat(objectMapper.readTree(first).get("requester").get("email").asText())
+                .isEqualTo(staff.email());
     }
 
     @Test
@@ -54,10 +52,10 @@ class RequestLifecycleIntegrationTest extends AbstractIntegrationTest {
                         .header("Authorization", bearer(token))
                         .contentType("application/json")
                         .content("""
-                                {"reference":"HD-QTY-%d","title":"Bad quantity","items":[
+                                {"title":"Bad quantity","items":[
                                   {"categoryId":"%s","quantity":-1,"purpose":"test"}
                                 ]}
-                                """.formatted(System.nanoTime(), categoryId)))
+                                """.formatted(categoryId)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors['items[0].quantity']").exists());
     }
@@ -67,13 +65,13 @@ class RequestLifecycleIntegrationTest extends AbstractIntegrationTest {
         HrStaff staff = freshStaff("lifecycle");
         String token = loginAs(staff);
         String categoryId = anyEquipmentCategoryId(token);
+        String orgUnitId = anyOrgUnitId(token);
         grantRole(staff.email(), AppRole.CICT_REVIEWER);
 
         String created = mockMvc.perform(post("/api/requests?submit=false")
                         .header("Authorization", bearer(token))
                         .contentType("application/json")
-                        .content("{\"reference\":\"HD-LIFECYCLE-%d\",\"title\":\"Lifecycle test\"}"
-                                .formatted(System.nanoTime())))
+                        .content("{\"title\":\"Lifecycle test\"}"))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         String id = objectMapper.readTree(created).get("id").asText();
@@ -83,11 +81,12 @@ class RequestLifecycleIntegrationTest extends AbstractIntegrationTest {
                         .header("Authorization", bearer(token))
                         .contentType("application/json")
                         .content("""
-                                {"justification":"Because I need it","requestType":"New requirement",
+                                {"orgUnitId":"%s","department":"Dean's office","designation":"Officer",
+                                 "justification":"Because I need it","requestType":"New requirement",
                                  "businessContext":"Administration","managerId":"%s",
                                  "declarationAccepted":true,
                                  "items":[{"categoryId":"%s","quantity":1,"purpose":"testing"}]}
-                                """.formatted(userId, categoryId)))
+                                """.formatted(orgUnitId, userId, categoryId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("pending_manager"));
 
@@ -115,12 +114,12 @@ class RequestLifecycleIntegrationTest extends AbstractIntegrationTest {
         HrStaff staff = freshStaff("no-cict");
         String token = loginAs(staff);
         String categoryId = anyEquipmentCategoryId(token);
+        String orgUnitId = anyOrgUnitId(token);
 
         String created = mockMvc.perform(post("/api/requests?submit=false")
                         .header("Authorization", bearer(token))
                         .contentType("application/json")
-                        .content("{\"reference\":\"HD-NOCICT-%d\",\"title\":\"No CICT role\"}"
-                                .formatted(System.nanoTime())))
+                        .content("{\"title\":\"No CICT role\"}"))
                 .andReturn().getResponse().getContentAsString();
         String id = objectMapper.readTree(created).get("id").asText();
         String userId = objectMapper.readTree(created).get("requester").get("id").asText();
@@ -129,11 +128,12 @@ class RequestLifecycleIntegrationTest extends AbstractIntegrationTest {
                         .header("Authorization", bearer(token))
                         .contentType("application/json")
                         .content("""
-                                {"justification":"Because I need it","requestType":"New requirement",
+                                {"orgUnitId":"%s","department":"Dean's office","designation":"Officer",
+                                 "justification":"Because I need it","requestType":"New requirement",
                                  "businessContext":"Administration","managerId":"%s",
                                  "declarationAccepted":true,
                                  "items":[{"categoryId":"%s","quantity":1,"purpose":"testing"}]}
-                                """.formatted(userId, categoryId)))
+                                """.formatted(orgUnitId, userId, categoryId)))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/requests/" + id + "/manager-decision")

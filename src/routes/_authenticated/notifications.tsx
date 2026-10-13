@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCheck } from "lucide-react";
-import { apiGet, apiPost, ApiError } from "@/lib/api-client";
+import { CheckCheck, X } from "lucide-react";
+import { apiDelete, apiGet, apiPost, ApiError } from "@/lib/api-client";
+import { QueryError } from "@/components/QueryError";
 import type { NotificationResponse } from "@/lib/api-types";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,15 @@ function NotificationsPage() {
     }
   }
 
+  async function removeOne(id: string) {
+    try {
+      await apiDelete(`/api/notifications/${id}`);
+      refresh();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Could not dismiss this notice");
+    }
+  }
+
   const rows = list.data ?? [];
   const unread = rows.filter((r) => !r.readAt).length;
 
@@ -70,9 +80,12 @@ function NotificationsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold">Notifications</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {unread > 0 ? `${unread} unread notice${unread === 1 ? "" : "s"}` : "You are up to date."}
+          <p className="label-caps">Workspace</p>
+          <h1 className="mt-1 font-display text-3xl">Notifications</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {unread > 0
+              ? `${unread} unread notice${unread === 1 ? "" : "s"}`
+              : "You are up to date."}
           </p>
         </div>
         <Button variant="outline" onClick={markAll} disabled={unread === 0}>
@@ -81,8 +94,15 @@ function NotificationsPage() {
         </Button>
       </div>
 
-      <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-card shadow-panel">
-        {rows.length === 0 && (
+      {list.isError && (
+        <QueryError message="Could not load your notifications." onRetry={() => list.refetch()} />
+      )}
+
+      <ul className="divide-y divide-border overflow-hidden surface">
+        {list.isPending && (
+          <li className="px-4 py-8 text-center text-sm text-muted-foreground">Loading…</li>
+        )}
+        {list.isSuccess && rows.length === 0 && (
           <li className="px-4 py-8 text-center text-sm text-muted-foreground">
             No notifications yet. You will be notified when a request needs your attention.
           </li>
@@ -110,6 +130,15 @@ function NotificationsPage() {
                   Mark read
                 </Button>
               )}
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Dismiss notice"
+                title="Dismiss"
+                onClick={() => void removeOne(n.id)}
+              >
+                <X className="size-4" />
+              </Button>
             </div>
           </li>
         ))}

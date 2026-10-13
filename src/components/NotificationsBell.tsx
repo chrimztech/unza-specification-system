@@ -21,14 +21,14 @@ export function NotificationsBell() {
     <Link
       to="/notifications"
       aria-label={`Notifications${count ? `, ${count} unread` : ""}`}
-      className="relative ml-2 rounded-sm p-2 transition-colors hover:bg-primary-foreground/10"
+      className="relative grid size-10 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
       onMouseEnter={() =>
         queryClient.invalidateQueries({ queryKey: ["notifications-unread", userId] })
       }
     >
-      <Bell className="size-4" />
+      <Bell className="size-[18px]" />
       {count > 0 && (
-        <span className="absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
+        <span className="absolute right-0.5 top-0.5 grid min-h-4 min-w-4 place-items-center rounded-full bg-destructive px-1 text-[9px] font-bold text-destructive-foreground ring-2 ring-card">
           {count > 9 ? "9+" : count}
         </span>
       )}

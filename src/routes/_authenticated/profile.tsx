@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/useAuth";
 import { DelegationPanel } from "@/components/DelegationPanel";
 
-
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
     meta: [
@@ -26,7 +25,9 @@ function Field({ label, value }: { label: string; value: string | null | undefin
   return (
     <div className="space-y-1">
       <p className="label-caps">{label}</p>
-      <p className="text-sm">{value?.trim() ? value : <span className="text-muted-foreground">Not set in HR</span>}</p>
+      <p className="text-sm">
+        {value?.trim() ? value : <span className="text-muted-foreground">Not set in HR</span>}
+      </p>
     </div>
   );
 }
@@ -40,13 +41,13 @@ function ProfilePage() {
         <p className="label-caps">Account</p>
         <h1 className="mt-1 font-display text-3xl">My staff profile</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          These details are maintained in the UNZA HR system and cannot be edited here. Your unit and
-          position level determine routing and the indicative specification tier applied to your
+          These details are maintained in the UNZA HR system and cannot be edited here. Your unit
+          and position level determine routing and the indicative specification tier applied to your
           requests. Details refresh automatically the next time you sign in.
         </p>
       </div>
 
-      <div className="space-y-5 rounded-md border border-border bg-card p-6 shadow-panel">
+      <div className="space-y-5 surface p-6">
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Institutional email" value={email ?? profile?.email} />
           <Field label="Full name" value={profile?.fullName} />
@@ -58,17 +59,25 @@ function ProfilePage() {
           <Field label="Organisational unit" value={profile?.orgUnit?.name} />
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <p className="label-caps">System roles</p>
-          <p className="text-sm text-muted-foreground">
-            {roles.length > 0 ? roles.join(", ") : "requester"} — roles are assigned by CICT
-            administrators.
+          <div className="flex flex-wrap gap-1.5">
+            {(roles.length > 0 ? roles : ["requester"]).map((r) => (
+              <span
+                key={r}
+                className="rounded-full border border-border bg-secondary px-2 py-0.5 text-xs"
+              >
+                {r.replace(/_/g, " ")}
+              </span>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Roles are assigned by CICT administrators.
           </p>
         </div>
       </div>
 
       <DelegationPanel />
     </div>
-
   );
 }

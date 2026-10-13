@@ -15,12 +15,13 @@ import java.util.UUID;
  * by {@code RequestService.validateForSubmission} instead.
  */
 public record RequestUpsertRequest(
-        String reference,
         String title,
         String requestedFor,
         UUID onBehalfOfId,
         UUID orgUnitId,
         String orgUnitName,
+        String department,
+        String designation,
         UUID managerId,
         String justification,
         String requestType,

@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { apiGet, apiPost, apiPut, ApiError } from "@/lib/api-client";
+import { Archive, Layers, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { apiDelete, apiGet, apiPost, apiPut, ApiError } from "@/lib/api-client";
 import type { EquipmentCategoryResponse, SpecProfileResponse } from "@/lib/api-types";
 import { useAuth } from "@/hooks/useAuth";
 import { useLookup } from "@/hooks/useLookups";
@@ -18,6 +19,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+const TIER_TONE: Record<string, string> = {
+  Standard: "bg-secondary text-secondary-foreground",
+  Enhanced: "bg-info/12 text-info",
+  Specialised: "bg-accent/18 text-accent-foreground",
+};
+
+function TierBadge({ tier }: { tier: string }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ${
+        TIER_TONE[tier] ?? "bg-secondary text-secondary-foreground"
+      }`}
+    >
+      {tier}
+    </span>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated/standards")({
   head: () => ({
@@ -98,7 +117,14 @@ function StandardsPage() {
 
   function resetDraft() {
     setEditingId(null);
-    setDraft({ category_id: "", tier: "Standard", name: "", summary: "", specsText: "", levels: [] });
+    setDraft({
+      category_id: "",
+      tier: "Standard",
+      name: "",
+      summary: "",
+      specsText: "",
+      levels: [],
+    });
   }
 
   function startEdit(p: SpecProfileResponse) {
@@ -162,10 +188,29 @@ function StandardsPage() {
     }
   }
 
+  async function removeProfile(p: SpecProfileResponse) {
+    if (
+      !confirm(
+        `Permanently delete the "${p.name}" profile? Retire it instead if requests may still refer to it.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await apiDelete(`/api/spec-profiles/${p.id}`);
+      toast.success("Profile deleted");
+      if (editingId === p.id) resetDraft();
+      queryClient.invalidateQueries({ queryKey: ["spec-profiles-admin"] });
+      queryClient.invalidateQueries({ queryKey: ["spec-profiles"] });
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Could not delete the profile.");
+    }
+  }
+
   if (!isCict) {
     return (
-      <div className="rounded-md border border-border bg-card p-8 text-center">
-        <h1 className="font-display text-2xl">Restricted</h1>
+      <div className="surface p-8 text-center">
+        <h1 className="font-display text-2xl font-bold">Restricted</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Only CICT reviewers and administrators can maintain specification standards.
         </p>
@@ -175,13 +220,20 @@ function StandardsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <p className="label-caps">CICT standards</p>
-        <h1 className="mt-1 font-display text-3xl">Specification profiles</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          These approved profiles drive the tier recommended on new requests and the technical detail
-          printed on approved specification sheets.
-        </p>
+      <div className="flex items-start gap-4">
+        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+          <Layers className="size-5" />
+        </span>
+        <div>
+          <p className="label-caps">CICT standards</p>
+          <h1 className="mt-1 font-display text-3xl font-extrabold tracking-tight">
+            Specification profiles
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            These approved profiles drive the tier recommended on new requests and the technical
+            detail printed on approved specification sheets.
+          </p>
+        </div>
       </div>
 
       {(categories.isError || profiles.isError) && (
@@ -194,8 +246,10 @@ function StandardsPage() {
         />
       )}
 
-      <form onSubmit={save} className="space-y-5 rounded-md border border-border bg-card p-6 shadow-panel">
-        <h2 className="font-display text-xl">{editingId ? "Edit profile" : "Add a profile"}</h2>
+      <form onSubmit={save} className="surface space-y-5 p-6">
+        <h2 className="font-display text-xl font-bold">
+          {editingId ? "Edit profile" : "Add a profile"}
+        </h2>
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Equipment category</Label>
@@ -256,7 +310,9 @@ function StandardsPage() {
             rows={6}
             value={draft.specsText}
             onChange={(e) => setDraft({ ...draft, specsText: e.target.value })}
-            placeholder={"Processor: Intel Core i5 (current generation)\nMemory: 16 GB\nStorage: 512 GB SSD"}
+            placeholder={
+              "Processor: Intel Core i5 (current generation)\nMemory: 16 GB\nStorage: 512 GB SSD"
+            }
           />
         </div>
         <div className="space-y-2">
@@ -276,7 +332,7 @@ function StandardsPage() {
                         : [...draft.levels, level],
                     })
                   }
-                  className={`rounded-sm border px-3 py-1 text-xs transition-colors ${
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                     active
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border hover:bg-muted"
@@ -290,6 +346,7 @@ function StandardsPage() {
         </div>
         <div className="flex gap-3">
           <Button type="submit" disabled={busy}>
+            <Plus className="mr-1.5 size-4" />
             {editingId ? "Save changes" : "Add profile"}
           </Button>
           {editingId ? (
@@ -300,22 +357,20 @@ function StandardsPage() {
         </div>
       </form>
 
-      <div className="space-y-6">
+      <div className="space-y-8">
         {grouped.map(([category, list]) => (
           <section key={category} className="space-y-3">
-            <h2 className="font-display text-xl">{category}</h2>
-            <div className="grid gap-3 md:grid-cols-2">
+            <h2 className="gold-underline font-display text-xl font-bold">{category}</h2>
+            <div className="grid gap-4 md:grid-cols-2">
               {(list ?? []).map((p) => (
                 <article
                   key={p.id}
-                  className={`rounded-md border border-border bg-card p-5 shadow-panel ${
-                    p.active ? "" : "opacity-60"
-                  }`}
+                  className={`surface surface-hover p-5 ${p.active ? "" : "opacity-60"}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="label-caps">{p.tier}</p>
-                      <h3 className="font-display text-lg">{p.name}</h3>
+                      <TierBadge tier={p.tier} />
+                      <h3 className="mt-2 font-display text-lg font-bold">{p.name}</h3>
                     </div>
                     <span className="text-xs text-muted-foreground">v{p.version}</span>
                   </div>
@@ -330,12 +385,27 @@ function StandardsPage() {
                       </div>
                     ))}
                   </dl>
-                  <div className="mt-4 flex gap-2">
+                  <div className="mt-4 flex gap-2 border-t border-border pt-4">
                     <Button size="sm" variant="outline" onClick={() => startEdit(p)}>
+                      <Pencil className="mr-1.5 size-3.5" />
                       Edit
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => toggleActive(p)}>
+                      {p.active ? (
+                        <Archive className="mr-1.5 size-3.5" />
+                      ) : (
+                        <RotateCcw className="mr-1.5 size-3.5" />
+                      )}
                       {p.active ? "Retire" : "Reinstate"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => removeProfile(p)}
+                    >
+                      <Trash2 className="mr-1.5 size-3.5" />
+                      Delete
                     </Button>
                   </div>
                 </article>

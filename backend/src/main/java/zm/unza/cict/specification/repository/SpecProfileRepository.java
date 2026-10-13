@@ -8,4 +8,6 @@ import java.util.UUID;
 
 public interface SpecProfileRepository extends JpaRepository<SpecProfile, UUID> {
     List<SpecProfile> findByCategoryId(UUID categoryId);
+
+    boolean existsByCategoryId(UUID categoryId);
 }

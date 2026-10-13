@@ -40,8 +40,8 @@ public class RequestAttachment {
     @Builder.Default
     private String kind = "supporting_document";
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "uploaded_by", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "uploaded_by")
     private User uploadedBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)

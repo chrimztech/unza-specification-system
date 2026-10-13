@@ -37,7 +37,13 @@ public class RequestItem {
     @Column(name = "intended_users")
     private String intendedUsers;
 
+    @Column(name = "number_of_users")
+    private Integer numberOfUsers;
+
     private String location;
+
+    @Column(name = "designation")
+    private String designation;
 
     @Column(name = "is_shared", nullable = false)
     @Builder.Default
@@ -47,6 +53,9 @@ public class RequestItem {
 
     @Column(name = "required_software")
     private String requiredSoftware;
+
+    @Column(name = "software_category")
+    private String softwareCategory;
 
     @Column(name = "proposed_spec")
     private String proposedSpec;

@@ -19,7 +19,9 @@ export type LookupList =
   | "spec_tier"
   | "asset_class"
   | "campus"
-  | "role";
+  | "role"
+  | "software_category"
+  | "designation";
 
 export type LookupOption = { value: string; label: string };
 
@@ -32,6 +34,43 @@ const FALLBACK: Record<string, LookupOption[]> = {
   spec_tier: ["Standard", "Enhanced", "Specialised"].map((v) => ({ value: v, label: v })),
   asset_class: [],
   campus: [],
+  software_category: ["Design", "Teaching", "Development", "Other"].map((v) => ({
+    value: v,
+    label: v,
+  })),
+  designation: [
+    "Vice-Chancellor",
+    "Deputy Vice-Chancellor",
+    "Registrar",
+    "Bursar / CFO",
+    "Dean",
+    "Deputy Dean",
+    "Assistant Dean",
+    "Head of Department",
+    "Director",
+    "Deputy Director",
+    "Assistant Director",
+    "Top Management",
+    "Executive Management",
+    "Manager",
+    "Professor",
+    "Associate Professor",
+    "Principal Lecturer",
+    "Senior Lecturer",
+    "Lecturer",
+    "Assistant Lecturer",
+    "Researcher",
+    "Specialist",
+    "Academic Staff",
+    "Principal Officer",
+    "Senior Officer",
+    "Officer",
+    "Technician",
+    "Technical Staff",
+    "Non-Academic Staff",
+    "Support Staff",
+    "Other",
+  ].map((v) => ({ value: v, label: v })),
   role: [
     { value: "requester", label: "Requester" },
     { value: "manager", label: "Manager" },
@@ -76,7 +115,7 @@ export function useSettings() {
     declaration_text: DECLARATION_TEXT,
     organisation_name: "University of Zambia",
     unit_name: "CICT · Equipment Specifications",
-    support_email: "servicedesk@unza.zm",
+    support_email: "cictsupport@unza.ac.zm",
     manager_sla_days: "3",
     cict_sla_days: "5",
   };

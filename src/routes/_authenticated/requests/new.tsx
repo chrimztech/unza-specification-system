@@ -1,9 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiGet, apiPost, ApiError } from "@/lib/api-client";
-import type { EquipmentCategoryResponse, RequestResponse, SpecProfileResponse, UserResponse } from "@/lib/api-types";
+import type {
+  EquipmentCategoryResponse,
+  OrgUnitResponse,
+  RequestResponse,
+  SpecProfileResponse,
+  UserResponse,
+} from "@/lib/api-types";
 import { useAuth } from "@/hooks/useAuth";
 import { recommendTier } from "@/lib/domain";
 import { useLookup, useSettings } from "@/hooks/useLookups";
@@ -16,10 +22,35 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+const ASSET_CLASS_ORDER = [
+  "End-user computing",
+  "Peripheral",
+  "Networking",
+  "Software",
+  "Audio visual",
+  "Server and datacentre",
+  "Power and protection",
+];
+
+function assetClassRank(assetClass: string | null) {
+  const index = ASSET_CLASS_ORDER.indexOf(assetClass ?? "");
+  return index === -1 ? ASSET_CLASS_ORDER.length : index;
+}
+
+/** Mirrors the Standard/Enhanced/Specialised volume bands SpecProfileService.recommend() escalates on. */
+function printerSuitability(numberOfUsers: number | null) {
+  if (!numberOfUsers || numberOfUsers <= 1) return "Personal printer — 1 user";
+  if (numberOfUsers <= 5) return "Standard — suits up to 5 users";
+  if (numberOfUsers <= 15) return "Enhanced — suits 6–15 shared users";
+  return "Specialised — suits 16+ high-volume shared users";
+}
 
 export const Route = createFileRoute("/_authenticated/requests/new")({
   head: () => ({
@@ -48,9 +79,13 @@ type Item = {
   quantity: number;
   purpose: string;
   intended_users: string;
+  number_of_users: number | null;
   location: string;
+  designation: string;
+  designation_other: string;
   is_shared: boolean;
   required_software: string;
+  software_category: string;
   proposed_spec: string;
 };
 
@@ -60,9 +95,13 @@ const emptyItem = (): Item => ({
   quantity: 1,
   purpose: "",
   intended_users: "",
+  number_of_users: null,
   location: "",
+  designation: "",
+  designation_other: "",
   is_shared: false,
   required_software: "",
+  software_category: "",
   proposed_spec: "",
 });
 
@@ -99,17 +138,22 @@ function Required() {
 
 function NewRequest() {
   const navigate = useNavigate();
-  const { userId, profile, displayName } = useAuth();
+  const { userId, profile, displayName, email } = useAuth();
   const requestTypes = useLookup("request_type");
   const businessContexts = useLookup("business_context");
   const priorities = useLookup("priority");
   const budgetStatuses = useLookup("budget_status");
+  const softwareCategories = useLookup("software_category");
+  const designations = useLookup("designation");
   const { setting } = useSettings();
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
 
   const [title, setTitle] = useState("");
-  const [reference, setReference] = useState("");
+  const [unitId, setUnitId] = useState("");
+  const [department, setDepartment] = useState("");
+  const [designation, setDesignation] = useState("");
+  const [designationOther, setDesignationOther] = useState("");
   const [requestType, setRequestType] = useState("");
   const [businessContext, setBusinessContext] = useState("");
   const [justification, setJustification] = useState("");
@@ -135,8 +179,36 @@ function NewRequest() {
     queryFn: () => apiGet<EquipmentCategoryResponse[]>("/api/equipment-categories"),
   });
   const activeCategories = useMemo(
-    () => (categories.data ?? []).filter((c) => c.active).sort((a, b) => a.sortOrder - b.sortOrder),
+    () =>
+      (categories.data ?? [])
+        .filter((c) => c.active)
+        .sort(
+          (a, b) =>
+            assetClassRank(a.assetClass) - assetClassRank(b.assetClass) ||
+            a.sortOrder - b.sortOrder,
+        ),
     [categories.data],
+  );
+  const categoriesByAssetClass = useMemo(() => {
+    const groups = new Map<string, EquipmentCategoryResponse[]>();
+    for (const c of activeCategories) {
+      const key = c.assetClass ?? "Other";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(c);
+    }
+    return groups;
+  }, [activeCategories]);
+
+  const orgUnits = useQuery({
+    queryKey: ["org-units"],
+    queryFn: () => apiGet<OrgUnitResponse[]>("/api/org-units"),
+  });
+  const unitOptions = useMemo(
+    () =>
+      (orgUnits.data ?? [])
+        .filter((u) => u.active && u.unitType !== "department")
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [orgUnits.data],
   );
 
   const specProfiles = useQuery({
@@ -161,7 +233,19 @@ function NewRequest() {
 
   const positionLevel = profile?.positionLevel ?? null;
   const effectivePositionLevel = onBehalfOfUser ? onBehalfOfUser.positionLevel : positionLevel;
-  const orgUnitName = profile?.orgUnit?.name ?? null;
+
+  useEffect(() => {
+    if (unitId || !profile?.orgUnit) return;
+    if (unitOptions.some((u) => u.id === profile.orgUnit!.id)) {
+      setUnitId(profile.orgUnit.id);
+    }
+  }, [profile, unitOptions, unitId]);
+
+  const selectedUnit = useMemo(
+    () => unitOptions.find((u) => u.id === unitId) ?? null,
+    [unitOptions, unitId],
+  );
+  const orgUnitName = selectedUnit?.name ?? null;
 
   const categoryById = useMemo(() => {
     const map = new Map<string, EquipmentCategoryResponse>();
@@ -172,10 +256,14 @@ function NewRequest() {
   const recommendations = useMemo(() => {
     const map: Record<string, { name: string; tier: string; id: string } | null> = {};
     for (const item of items) {
+      const itemLevel =
+        (item.designation === "Other" ? item.designation_other : item.designation) ||
+        effectivePositionLevel;
       const rec = recommendTier(
         specProfiles.data ?? [],
         item.category_id || null,
-        effectivePositionLevel,
+        itemLevel,
+        item.number_of_users,
       );
       map[item.key] = rec ? { id: rec.id, name: rec.name, tier: rec.tier } : null;
     }
@@ -206,21 +294,37 @@ function NewRequest() {
 
   const stepIssues: string[][] = [
     [
-      reference.trim().length > 2 ? "" : "Enter the CICT Help Desk ticket number for this request.",
       title.trim().length > 2 ? "" : "Add a descriptive request title.",
+      unitId ? "" : "Select your Unit/School.",
+      department.trim() ? "" : "Enter your department.",
+      designation && (designation !== "Other" || designationOther.trim())
+        ? ""
+        : "Enter the designation of the intended user.",
       requestType ? "" : "Select the request type.",
       businessContext ? "" : "Select the business context.",
-      justification.trim().length > 10 ? "" : "Give a business justification (at least a sentence).",
+      justification.trim().length > 10
+        ? ""
+        : "Give a business justification (at least a sentence).",
     ].filter(Boolean),
     [
       items.length > 0 ? "" : "Add at least one equipment item.",
       items.every((i) => i.category_id) ? "" : "Every item needs an equipment category.",
       items.every((i) => i.quantity > 0) ? "" : "Quantities must be one or more.",
       items.every((i) => i.purpose.trim()) ? "" : "Describe what each item will be used for.",
+      items.every(
+        (i) => categoryById.get(i.category_id)?.code !== "PRINTER" || (i.number_of_users ?? 0) > 0,
+      )
+        ? ""
+        : "Specify the number of users for each printer.",
+      items.every(
+        (i) => categoryById.get(i.category_id)?.assetClass !== "Software" || i.software_category,
+      )
+        ? ""
+        : "Select a software category for each software item.",
     ].filter(Boolean),
-    [priority !== "normal" && !priorityReason.trim() ? "Explain the elevated priority." : ""].filter(
-      Boolean,
-    ),
+    [
+      priority !== "normal" && !priorityReason.trim() ? "Explain the elevated priority." : "",
+    ].filter(Boolean),
     [
       managerId ? "" : "Choose the approving manager.",
       declaration ? "" : "Accept the declaration before submitting.",
@@ -234,7 +338,6 @@ function NewRequest() {
     setBusy(true);
     try {
       const created = await apiPost<RequestResponse>(`/api/requests?submit=${submit}`, {
-        reference,
         title,
         requestType,
         businessContext,
@@ -252,8 +355,11 @@ function NewRequest() {
         fundingSource: fundingSource || undefined,
         costCentre: costCentre || undefined,
         estimatedBudget: estimatedTotal || undefined,
-        orgUnitId: profile?.orgUnit?.id ?? undefined,
+        orgUnitId: unitId || undefined,
         orgUnitName: orgUnitName ?? undefined,
+        department: department || undefined,
+        designation:
+          designation === "Other" ? designationOther || undefined : designation || undefined,
         managerId: managerId || undefined,
         declarationAccepted: submit ? declaration : false,
         items: items.map((item, index) => ({
@@ -261,9 +367,15 @@ function NewRequest() {
           quantity: item.quantity,
           purpose: item.purpose,
           intendedUsers: item.intended_users || undefined,
+          numberOfUsers: item.number_of_users ?? undefined,
           location: item.location || undefined,
+          designation:
+            item.designation === "Other"
+              ? item.designation_other || undefined
+              : item.designation || undefined,
           isShared: item.is_shared,
           requiredSoftware: item.required_software || undefined,
+          softwareCategory: item.software_category || undefined,
           proposedSpec: item.proposed_spec || undefined,
           sortOrder: index,
         })),
@@ -284,25 +396,25 @@ function NewRequest() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
-      <header className="rounded-md border border-border bg-card p-6 shadow-panel">
+      <header className="surface p-6">
         <p className="label-caps">New submission</p>
         <h1 className="mt-1 font-display text-3xl">CICT equipment request</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Describe the need in business terms. CICT determines the technical specification against
           approved institutional standards, so you do not need to name products or models.
         </p>
-        <dl className="mt-5 grid gap-4 border-t border-border pt-4 text-sm sm:grid-cols-4">
+        <dl className="mt-5 grid gap-4 border-t border-border pt-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <dt className="label-caps">Requester</dt>
             <dd className="mt-1 font-medium">{displayName || "—"}</dd>
           </div>
           <div>
-            <dt className="label-caps">Position level</dt>
-            <dd className="mt-1 font-medium">{positionLevel || "Not recorded"}</dd>
+            <dt className="label-caps">Requester email</dt>
+            <dd className="mt-1 font-medium">{email || "—"}</dd>
           </div>
           <div>
-            <dt className="label-caps">Organisational unit</dt>
-            <dd className="mt-1 font-medium">{orgUnitName || "Not recorded"}</dd>
+            <dt className="label-caps">Position level</dt>
+            <dd className="mt-1 font-medium">{positionLevel || "Not recorded"}</dd>
           </div>
           <div>
             <dt className="label-caps">Service standard</dt>
@@ -358,30 +470,13 @@ function NewRequest() {
             </ol>
           </nav>
 
-          <div className="rounded-md border border-border bg-card p-6 shadow-panel">
+          <div className="surface p-6">
             {step === 0 && (
               <div className="space-y-6">
                 <SectionHeading
                   title="Business need"
                   description="Set out the work that requires equipment and the consequence of not providing it."
                 />
-                <div className="space-y-1.5">
-                  <Label htmlFor="reference">
-                    CICT Help Desk ticket number
-                    <Required />
-                  </Label>
-                  <Input
-                    id="reference"
-                    maxLength={80}
-                    value={reference}
-                    onChange={(e) => setReference(e.target.value)}
-                    placeholder="e.g. HD-2026-00123"
-                  />
-                  <FieldNote>
-                    Raise a ticket with the CICT Help Desk first, then enter that ticket number
-                    here — it becomes this request's official reference.
-                  </FieldNote>
-                </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="title">
                     Request title
@@ -397,6 +492,70 @@ function NewRequest() {
                   <FieldNote>
                     Used on approvals and the specification sheet. {140 - title.length} characters
                     remaining.
+                  </FieldNote>
+                </div>
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>
+                      Unit / School
+                      <Required />
+                    </Label>
+                    <Select value={unitId} onValueChange={setUnitId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your unit or school" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {unitOptions.map((u) => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="department">
+                      Department
+                      <Required />
+                    </Label>
+                    <Input
+                      id="department"
+                      maxLength={120}
+                      value={department}
+                      onChange={(e) => setDepartment(e.target.value)}
+                      placeholder="Dean's office"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>
+                    Designation of intended user
+                    <Required />
+                  </Label>
+                  <Select value={designation} onValueChange={setDesignation}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a designation" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {designations.map((d) => (
+                        <SelectItem key={d.value} value={d.value}>
+                          {d.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {designation === "Other" && (
+                    <Input
+                      className="mt-1.5"
+                      maxLength={120}
+                      value={designationOther}
+                      onChange={(e) => setDesignationOther(e.target.value)}
+                      placeholder="Please specify the designation"
+                    />
+                  )}
+                  <FieldNote>
+                    Use this when the equipment is intended for a role rather than yourself, e.g.
+                    "Assistant Dean Undergraduate &amp; Assistant Dean Postgraduate".
                   </FieldNote>
                 </div>
                 <div className="grid gap-5 sm:grid-cols-2">
@@ -596,12 +755,19 @@ function NewRequest() {
                                 <SelectValue placeholder="Select category" />
                               </SelectTrigger>
                               <SelectContent>
-                                {activeCategories.map((c) => (
-                                  <SelectItem key={c.id} value={c.id}>
-                                    {c.icon ? `${c.icon} ` : ""}
-                                    {c.name}
-                                  </SelectItem>
-                                ))}
+                                {Array.from(categoriesByAssetClass.entries()).map(
+                                  ([assetClass, cats]) => (
+                                    <SelectGroup key={assetClass}>
+                                      <SelectLabel>{assetClass}</SelectLabel>
+                                      {cats.map((c) => (
+                                        <SelectItem key={c.id} value={c.id}>
+                                          {c.icon ? `${c.icon} ` : ""}
+                                          {c.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectGroup>
+                                  ),
+                                )}
                               </SelectContent>
                             </Select>
                           </div>
@@ -713,16 +879,38 @@ function NewRequest() {
                           />
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2">
-                          <div className="space-y-1.5">
-                            <Label>Intended users</Label>
-                            <Input
-                              value={item.intended_users}
-                              onChange={(e) =>
-                                patchItem(item.key, { intended_users: e.target.value })
-                              }
-                              placeholder="Two registry officers"
-                            />
-                          </div>
+                          {cat?.code === "PRINTER" ? (
+                            <div className="space-y-1.5">
+                              <Label>
+                                Number of users
+                                <Required />
+                              </Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                max={10000}
+                                value={item.number_of_users ?? ""}
+                                onChange={(e) =>
+                                  patchItem(item.key, {
+                                    number_of_users: e.target.value ? Number(e.target.value) : null,
+                                  })
+                                }
+                                placeholder="e.g. 8"
+                              />
+                              <FieldNote>{printerSuitability(item.number_of_users)}</FieldNote>
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5">
+                              <Label>Intended users</Label>
+                              <Input
+                                value={item.intended_users}
+                                onChange={(e) =>
+                                  patchItem(item.key, { intended_users: e.target.value })
+                                }
+                                placeholder="Two registry officers"
+                              />
+                            </div>
+                          )}
                           <div className="space-y-1.5">
                             <Label>Location / office</Label>
                             <Input
@@ -731,6 +919,40 @@ function NewRequest() {
                               placeholder="Great East Road campus, Registry, Room 12"
                             />
                           </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>Designation of this item's user (optional)</Label>
+                          <Select
+                            value={item.designation}
+                            onValueChange={(v) => patchItem(item.key, { designation: v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Defaults to the request's designation" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {designations.map((d) => (
+                                <SelectItem key={d.value} value={d.value}>
+                                  {d.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {item.designation === "Other" && (
+                            <Input
+                              className="mt-1.5"
+                              maxLength={120}
+                              value={item.designation_other}
+                              onChange={(e) =>
+                                patchItem(item.key, { designation_other: e.target.value })
+                              }
+                              placeholder="Please specify the designation"
+                            />
+                          )}
+                          <FieldNote>
+                            Set this when an item is for someone with a different role than the rest
+                            of the request, e.g. one laptop for the Dean among otherwise general
+                            office equipment.
+                          </FieldNote>
                         </div>
                         <div className="space-y-1.5">
                           <Label>Software or systems it must run</Label>
@@ -742,6 +964,29 @@ function NewRequest() {
                             placeholder="Student records system, Office, SPSS"
                           />
                         </div>
+                        {cat?.assetClass === "Software" && (
+                          <div className="space-y-1.5">
+                            <Label>
+                              Software category
+                              <Required />
+                            </Label>
+                            <Select
+                              value={item.software_category}
+                              onValueChange={(v) => patchItem(item.key, { software_category: v })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {softwareCategories.map((o) => (
+                                  <SelectItem key={o.value} value={o.value}>
+                                    {o.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                         <div className="space-y-1.5">
                           <Label>Proposed specification (optional)</Label>
                           <Textarea
@@ -907,11 +1152,19 @@ function NewRequest() {
 
                 <dl className="divide-y divide-border rounded-md border border-border text-sm">
                   {[
-                    ["Help Desk reference", reference],
                     ["Title", title],
+                    ["Unit / School", orgUnitName],
+                    ["Department", department],
+                    [
+                      "Designation of intended user",
+                      designation === "Other" ? designationOther : designation,
+                    ],
                     ["Request type", requestType],
                     ["Business context", businessContext],
-                    ["Requested on behalf of", onBehalfOfUser?.fullName || requestedFor || "Myself"],
+                    [
+                      "Requested on behalf of",
+                      onBehalfOfUser?.fullName || requestedFor || "Myself",
+                    ],
                     ["Priority", priority],
                     ["Required by", requiredBy],
                     ["Budget status", budgetStatus],
@@ -944,7 +1197,14 @@ function NewRequest() {
                           </td>
                           <td className="px-4 py-2.5">{item.quantity}</td>
                           <td className="px-4 py-2.5 text-muted-foreground">
-                            {[item.intended_users, item.location].filter(Boolean).join(" · ") || "—"}
+                            {[
+                              item.number_of_users
+                                ? `${item.number_of_users} users`
+                                : item.intended_users,
+                              item.location,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ") || "—"}
                           </td>
                           <td className="px-4 py-2.5">{recommendations[item.key]?.tier ?? "—"}</td>
                         </tr>
@@ -984,7 +1244,7 @@ function NewRequest() {
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                disabled={busy || !title.trim() || !reference.trim()}
+                disabled={busy || !title.trim()}
                 onClick={() => save(false)}
               >
                 Save draft
@@ -1003,7 +1263,7 @@ function NewRequest() {
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-          <div className="rounded-md border border-border bg-card p-4 shadow-panel">
+          <div className="surface p-4">
             <p className="label-caps">Submission summary</p>
             <dl className="mt-3 space-y-2.5 text-sm">
               <div className="flex justify-between gap-3">
@@ -1016,9 +1276,7 @@ function NewRequest() {
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-muted-foreground">Total units</dt>
-                <dd className="font-medium">
-                  {items.reduce((n, i) => n + (i.quantity || 0), 0)}
-                </dd>
+                <dd className="font-medium">{items.reduce((n, i) => n + (i.quantity || 0), 0)}</dd>
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-muted-foreground">Indicative value</dt>
@@ -1042,9 +1300,7 @@ function NewRequest() {
               <li>2. CICT technical review and specification</li>
               <li>3. Approved specification sheet issued</li>
             </ol>
-            <p className="mt-3">
-              Questions? Contact {setting("support_email")}.
-            </p>
+            <p className="mt-3">Questions? Contact {setting("support_email")}.</p>
           </div>
         </aside>
       </div>

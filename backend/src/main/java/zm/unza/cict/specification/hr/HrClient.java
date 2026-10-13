@@ -113,12 +113,18 @@ public class HrClient {
     private HrStaff toHrStaff(HrStaffData data) {
         String email = trimToNull(data.email());
         String position = trimToNull(data.position());
+        String positionHierarchy = trimToNull(data.positionHierarchy());
+        // HR doesn't always populate position_hierarchy; falling back to the job title keeps
+        // spec-tier recommendations working (best-effort fuzzy match) instead of leaving the
+        // requester's position level blank on their profile and every new request.
+        String positionLevel = positionHierarchy != null ? positionHierarchy : position;
         return new HrStaff(
                 email != null ? email.toLowerCase() : null,
                 buildFullName(data.firstName(), data.otherNames(), data.lastName()),
                 trimToNull(data.manNumber()),
                 position != null ? toTitleCase(position) : null,
-                trimToNull(data.phone())
+                trimToNull(data.phone()),
+                positionLevel != null ? toTitleCase(positionLevel) : null
         );
     }
 

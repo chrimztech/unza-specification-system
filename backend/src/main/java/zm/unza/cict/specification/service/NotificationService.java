@@ -13,6 +13,7 @@ import zm.unza.cict.specification.domain.User;
 import zm.unza.cict.specification.dto.notification.NotificationResponse;
 import zm.unza.cict.specification.repository.DelegationRepository;
 import zm.unza.cict.specification.repository.NotificationRepository;
+import zm.unza.cict.specification.repository.UserRepository;
 import zm.unza.cict.specification.repository.UserRoleAssignmentRepository;
 
 import java.time.Instant;
@@ -28,6 +29,8 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRoleAssignmentRepository userRoleAssignmentRepository;
     private final DelegationRepository delegationRepository;
+    private final UserRepository userRepository;
+    private final EmailService emailService;
 
     @Transactional
     public void notifyStatusChange(Request request, RequestStatus previousStatus, UUID actorId) {
@@ -48,18 +51,25 @@ public class NotificationService {
 
         String statusLabel = request.getStatus().dbValue().replace('_', ' ');
         String message = "Request " + request.getReference() + " is now " + statusLabel + ".";
-        String title = request.getReference() + " · " + statusLabel;
+        String title = request.getReference() + " - " + statusLabel;
         String body = (request.getTitle() == null || request.getTitle().isBlank() ? "Equipment request" : request.getTitle())
-                + " — " + message;
+                + " - " + message;
 
-        recipients.stream().distinct()
+        List<UUID> recipientIds = recipients.stream().distinct()
                 .filter(r -> r != null && !r.equals(actorId))
-                .forEach(userId -> notificationRepository.save(Notification.builder()
-                        .user(User.builder().id(userId).build())
-                        .request(request)
-                        .title(title)
-                        .body(body)
-                        .build()));
+                .toList();
+
+        recipientIds.forEach(userId -> notificationRepository.save(Notification.builder()
+                .user(User.builder().id(userId).build())
+                .request(request)
+                .title(title)
+                .body(body)
+                .build()));
+
+        if (emailService.isEnabled() && !recipientIds.isEmpty()) {
+            userRepository.findAllById(recipientIds)
+                    .forEach(user -> emailService.send(user.getEmail(), title, body));
+        }
     }
 
     @Transactional(readOnly = true)

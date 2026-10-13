@@ -1,4 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  ChevronRight,
+  ClipboardCheck,
+  FileCheck2,
+  FileText,
+  ShieldCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
@@ -24,136 +34,317 @@ export const Route = createFileRoute("/")({
 const STEPS = [
   {
     n: "01",
-    title: "Requester submits",
-    body: "A staff member records the business need, the equipment items and the intended use, then accepts the accuracy declaration.",
+    title: "Submit the need",
+    body: "Record the business need, intended use and equipment items in one guided request.",
+    icon: FileText,
   },
   {
     n: "02",
-    title: "Manager confirms the need",
-    body: "The responsible manager approves the business case, returns it for correction, or rejects it with a recorded reason.",
+    title: "Manager review",
+    body: "Your responsible manager confirms the business case and ownership of the request.",
+    icon: ClipboardCheck,
   },
   {
     n: "03",
-    title: "CICT sets the specification",
-    body: "CICT compares the request against the approved catalogue, applies the correct tier and records a structured technical decision.",
+    title: "CICT assessment",
+    body: "CICT applies approved standards and records a structured technical decision.",
+    icon: ShieldCheck,
   },
   {
     n: "04",
-    title: "Traceable specification sheet",
-    body: "An immutable reference number, full audit trail and a procurement-ready specification sheet are produced.",
+    title: "Ready to procure",
+    body: "Receive a traceable, procurement-ready specification sheet with a full audit history.",
+    icon: FileCheck2,
   },
 ];
+
+const TIERS = [
+  { name: "Standard", detail: "Core productivity and university systems" },
+  { name: "Enhanced", detail: "Teaching, research and advanced multitasking" },
+  { name: "Specialised", detail: "Engineering, GIS, media and compute workloads" },
+];
+
+function Brand() {
+  return (
+    <Link to="/" className="flex items-center gap-3">
+      <span className="grid size-11 place-items-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-border">
+        <img src="/logo.png" alt="University of Zambia" className="h-full w-full object-contain" />
+      </span>
+      <span className="leading-tight">
+        <span className="block font-display text-sm font-extrabold tracking-tight text-foreground sm:text-base">
+          CICT Specifications
+        </span>
+        <span className="mt-0.5 block text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground sm:text-[10px]">
+          University of Zambia
+        </span>
+      </span>
+    </Link>
+  );
+}
 
 function Landing() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="crest-header crest-header-motif sticky top-0 z-40 text-primary-foreground shadow-lift">
-        <div className="relative z-10 mx-auto flex max-w-6xl items-center gap-3 px-5 py-4">
-          <span className="grid size-10 place-items-center rounded-md bg-[image:var(--gradient-gold)] font-display text-lg font-bold text-accent-foreground shadow-panel ring-1 ring-primary-foreground/25">
-            UZ
-          </span>
-          <span className="leading-tight">
-            <span className="block font-display text-base font-semibold">University of Zambia</span>
-            <span className="block text-[10px] uppercase tracking-[0.16em] opacity-75">
-              Centre for Information and Communications Technology
-            </span>
-          </span>
-          <div className="ml-auto flex items-center gap-3">
+      <div className="h-1 bg-[image:var(--gradient-gold)]" />
+      <header className="sticky top-0 z-40 border-b border-border/80 bg-card/90 backdrop-blur-xl">
+        <div className="mx-auto flex h-[76px] max-w-7xl items-center gap-4 px-5 sm:px-8">
+          <Brand />
+          <nav
+            className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2"
+            aria-label="Public navigation"
+          >
             <Link
               to="/help"
-              className="nav-pill px-3.5 py-1.5 text-sm text-primary-foreground/85 hover:bg-primary-foreground/12 hover:text-primary-foreground"
+              className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:block"
             >
               Guidance
             </Link>
-            <Button asChild variant="secondary" size="sm" className="rounded-full">
-              <Link to="/auth">Staff sign in</Link>
+            <Button asChild size="sm">
+              <Link to="/auth">
+                <span className="sm:hidden">Sign in</span>
+                <span className="hidden sm:inline">Staff sign in</span>
+                <ArrowRight />
+              </Link>
             </Button>
-          </div>
+          </nav>
         </div>
-        <div className="h-[3px] w-full bg-[image:var(--gradient-gold)]" />
       </header>
 
-      <section className="relative overflow-hidden border-b border-border">
-        <div className="relative mx-auto grid max-w-6xl gap-12 px-5 py-20 md:grid-cols-[1.15fr_0.85fr] md:py-28">
-          <div className="animate-fade-in">
-            <p className="inline-flex items-center gap-2 rounded-full border border-accent/40 bg-accent/12 px-3.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-accent-foreground">
-              <span className="size-1.5 rounded-full bg-accent" />
-              Official CICT service
-            </p>
-            <h1 className="mt-5 font-display text-5xl leading-[1.05] text-foreground md:text-6xl">
-              CICT Equipment Specification and{" "}
-              <span className="bg-[image:var(--gradient-crest)] bg-clip-text text-transparent">
-                Request Management
-              </span>
-            </h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-              One controlled process for every department, school, directorate, institute and
-              centre. Requests are checked against approved specification tiers, approved by the
-              responsible manager and finalised by CICT with a complete audit trail.
-            </p>
-            <div className="mt-9 flex flex-wrap gap-3">
-              <Button
-                asChild
-                size="lg"
-                className="rounded-full px-7 shadow-lift transition-transform hover:scale-[1.03]"
-              >
-                <Link to="/auth">Sign in to submit a request</Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="rounded-full px-7">
-                <Link to="/help">Read the guidance</Link>
-              </Button>
+      <main className="flex-1">
+        <section className="relative overflow-hidden border-b border-border/70 bg-card">
+          <div className="pointer-events-none absolute -left-24 top-20 size-96 rounded-full bg-primary/5 blur-3xl" />
+          <div className="pointer-events-none absolute -right-16 top-0 size-[32rem] rounded-full bg-accent/10 blur-3xl" />
+          <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[1.08fr_0.92fr] lg:py-24">
+            <div className="animate-fade-in">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
+                <CheckCircle2 className="size-3.5" />
+                Official university workflow
+              </div>
+              <h1 className="mt-6 max-w-3xl break-words font-display text-[2.3rem] font-extrabold leading-[1.08] tracking-[-0.045em] text-foreground min-[420px]:text-[2.65rem] sm:text-5xl lg:text-[3.5rem]">
+                Equipment requests, from business need to
+                <span className="text-primary"> approved specification.</span>
+              </h1>
+              <p className="mt-6 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+                A clear, accountable process for requesting ICT equipment across the University of
+                Zambia—bringing staff, managers and CICT into one shared workspace.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Button asChild size="lg" className="px-6 shadow-md">
+                  <Link to="/auth">
+                    Start a request <ArrowRight />
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="px-6">
+                  <Link to="/help">See how it works</Link>
+                </Button>
+              </div>
+              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-xs font-medium text-muted-foreground">
+                {["HR staff access", "Role-based approvals", "Complete audit history"].map(
+                  (item) => (
+                    <span key={item} className="flex items-center gap-2">
+                      <Check className="size-3.5 text-success" /> {item}
+                    </span>
+                  ),
+                )}
+              </div>
             </div>
-            <p className="mt-5 border-l-2 border-accent pl-3 text-xs leading-relaxed text-muted-foreground">
-              CICT technical approval confirms the correct minimum specification. It is not approval
-              to spend money.
+
+            <div className="animate-scale-in lg:pl-5">
+              <div className="relative overflow-hidden rounded-2xl bg-sidebar p-6 text-sidebar-foreground shadow-2xl sm:p-8">
+                <div className="absolute right-0 top-0 size-52 rounded-full bg-accent/15 blur-3xl" />
+                <div className="relative">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-sidebar-foreground/45">
+                        Request journey
+                      </p>
+                      <h2 className="mt-1 font-display text-xl font-bold text-white">
+                        One controlled workflow
+                      </h2>
+                    </div>
+                    <span className="rounded-lg bg-white/8 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-accent">
+                      Traceable
+                    </span>
+                  </div>
+
+                  <div className="mt-7 space-y-1">
+                    {[
+                      ["Request submitted", "Complete", true],
+                      ["Manager approval", "Complete", true],
+                      ["CICT technical review", "In review", false],
+                      ["Specification issued", "Next", false],
+                    ].map(([label, state, complete], index) => (
+                      <div key={String(label)} className="relative flex items-center gap-4 py-3">
+                        {index < 3 && (
+                          <span className="absolute left-[15px] top-10 h-7 w-px bg-white/12" />
+                        )}
+                        <span
+                          className={`relative z-10 grid size-8 shrink-0 place-items-center rounded-full border ${complete ? "border-success/30 bg-success/18 text-success" : index === 2 ? "border-accent/40 bg-accent/15 text-accent" : "border-white/10 bg-white/5 text-white/35"}`}
+                        >
+                          {complete ? (
+                            <Check className="size-4" />
+                          ) : (
+                            <span className="text-[10px] font-bold">{index + 1}</span>
+                          )}
+                        </span>
+                        <span className="min-w-0 flex-1 text-sm font-semibold text-white/90">
+                          {label}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold uppercase tracking-wider ${complete ? "text-success" : index === 2 ? "text-accent" : "text-white/30"}`}
+                        >
+                          {state}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 rounded-xl border border-white/10 bg-white/6 p-4">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-medium text-sidebar-foreground/60">
+                        Request reference
+                      </span>
+                      <span className="font-mono font-semibold text-white">
+                        UNZA/CICT/2026/0048
+                      </span>
+                    </div>
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/8">
+                      <div className="h-full w-3/4 rounded-full bg-[image:var(--gradient-gold)]" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-border/70 bg-secondary/45">
+          <div className="mx-auto grid max-w-7xl divide-y divide-border/70 px-5 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-8">
+            {[
+              ["01", "One shared record", "No scattered forms or email chains"],
+              ["02", "Clear accountability", "Every decision has an owner and timestamp"],
+              ["03", "Approved standards", "Consistent specifications for every unit"],
+            ].map(([number, title, description]) => (
+              <div key={number} className="flex gap-4 py-6 sm:px-6 first:pl-0 last:pr-0">
+                <span className="font-display text-lg font-extrabold text-primary/35">
+                  {number}
+                </span>
+                <div>
+                  <p className="text-sm font-bold">{title}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20">
+          <div className="max-w-2xl">
+            <p className="label-caps text-primary">Built for accountability</p>
+            <h2 className="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+              A simpler path through every review
+            </h2>
+            <p className="mt-4 text-sm leading-6 text-muted-foreground sm:text-base">
+              Each stage keeps the right information visible to the right people, without losing the
+              context behind a decision.
             </p>
           </div>
-          <div className="surface surface-hover animate-scale-in bg-[image:var(--gradient-parchment)] p-7">
-            <p className="gold-underline label-caps">Specification tiers in use</p>
-            <ul className="mt-5 space-y-5 text-sm">
-              {[
-                {
-                  t: "Standard",
-                  d: "Administrative and clerical workloads — core productivity and university systems.",
-                },
-                {
-                  t: "Enhanced",
-                  d: "Teaching, research and heavy multitasking across large datasets and applications.",
-                },
-                {
-                  t: "Specialised",
-                  d: "Engineering, GIS, data science, media production and server workloads.",
-                },
-              ].map((tier) => (
-                <li key={tier.t} className="border-l-2 border-primary/25 pl-4">
-                  <div className="font-display text-base font-semibold">{tier.t}</div>
-                  <div className="mt-1 leading-relaxed text-muted-foreground">{tier.d}</div>
+          <ol className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {STEPS.map((step) => {
+              const Icon = step.icon;
+              return (
+                <li
+                  key={step.n}
+                  className="surface group p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-lift"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="grid size-10 place-items-center rounded-xl bg-primary/8 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                      <Icon className="size-5" />
+                    </span>
+                    <span className="font-display text-xs font-extrabold text-muted-foreground/40">
+                      {step.n}
+                    </span>
+                  </div>
+                  <h3 className="mt-5 font-display text-base font-bold">{step.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{step.body}</p>
                 </li>
+              );
+            })}
+          </ol>
+        </section>
+
+        <section className="border-y border-border/70 bg-card">
+          <div className="mx-auto grid max-w-7xl items-center gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[0.85fr_1.15fr] lg:py-20">
+            <div>
+              <p className="label-caps text-primary">Consistent by design</p>
+              <h2 className="mt-3 font-display text-3xl font-extrabold tracking-tight">
+                Specifications matched to the work
+              </h2>
+              <p className="mt-4 text-sm leading-6 text-muted-foreground">
+                CICT applies an approved equipment tier based on the role, use case and workload—not
+                a one-size-fits-all list.
+              </p>
+              <Link
+                to="/help"
+                className="mt-6 inline-flex items-center gap-1.5 text-sm font-bold text-primary hover:underline"
+              >
+                Read the specification guidance <ChevronRight className="size-4" />
+              </Link>
+            </div>
+            <div className="grid gap-3">
+              {TIERS.map((tier, index) => (
+                <div
+                  key={tier.name}
+                  className="flex items-center gap-4 rounded-xl border border-border bg-background/70 p-4"
+                >
+                  <span
+                    className={`grid size-9 shrink-0 place-items-center rounded-lg text-xs font-extrabold ${index === 0 ? "bg-primary/10 text-primary" : index === 1 ? "bg-info/10 text-info" : "bg-accent/20 text-accent-foreground"}`}
+                  >
+                    {index + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold">{tier.name}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{tier.detail}</p>
+                  </div>
+                  <ChevronRight className="size-4 text-muted-foreground/40" />
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20">
+          <div className="relative overflow-hidden rounded-2xl bg-primary px-6 py-10 text-primary-foreground shadow-lift sm:px-10 lg:flex lg:items-center lg:justify-between lg:gap-8">
+            <div className="absolute -right-10 -top-20 size-72 rounded-full bg-accent/15 blur-3xl" />
+            <div className="relative max-w-2xl">
+              <h2 className="font-display text-2xl font-extrabold sm:text-3xl">
+                Ready to submit an equipment request?
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-primary-foreground/70">
+                Sign in with your University staff credentials. Your staff details will be securely
+                matched to your HR record.
+              </p>
+            </div>
+            <Button
+              asChild
+              size="lg"
+              variant="secondary"
+              className="relative mt-6 shrink-0 lg:mt-0"
+            >
+              <Link to="/auth">
+                Continue to staff sign in <ArrowRight />
+              </Link>
+            </Button>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-border bg-card">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-7 text-xs text-muted-foreground sm:px-8">
+          <Brand />
+          <span>Centre for Information and Communications Technology</span>
         </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-6xl flex-1 px-5 py-20">
-        <h2 className="gold-underline font-display text-3xl">How a request moves</h2>
-        <ol className="mt-10 grid gap-6 md:grid-cols-4">
-          {STEPS.map((step) => (
-            <li key={step.n} className="surface surface-hover group p-6">
-              <span className="font-display text-3xl text-accent transition-colors group-hover:text-primary">
-                {step.n}
-              </span>
-              <h3 className="mt-3 font-display text-lg font-semibold">{step.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.body}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <footer className="border-t border-border bg-card/60 py-8 text-center text-xs text-muted-foreground">
-        Centre for Information and Communications Technology · University of Zambia
       </footer>
     </div>
   );
-
 }

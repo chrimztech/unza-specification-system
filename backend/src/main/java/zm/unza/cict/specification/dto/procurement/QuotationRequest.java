@@ -5,11 +5,13 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 public record QuotationRequest(
         @NotBlank String vendorName,
         @NotNull @Positive BigDecimal amount,
         String currency,
-        String notes
+        String notes,
+        UUID attachmentId
 ) {
 }

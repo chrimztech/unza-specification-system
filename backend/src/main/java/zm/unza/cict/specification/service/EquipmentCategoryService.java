@@ -3,11 +3,14 @@ package zm.unza.cict.specification.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import zm.unza.cict.specification.common.exception.BadRequestException;
 import zm.unza.cict.specification.common.exception.NotFoundException;
 import zm.unza.cict.specification.domain.EquipmentCategory;
 import zm.unza.cict.specification.dto.catalogue.EquipmentCategoryRequest;
 import zm.unza.cict.specification.dto.catalogue.EquipmentCategoryResponse;
 import zm.unza.cict.specification.repository.EquipmentCategoryRepository;
+import zm.unza.cict.specification.repository.RequestItemRepository;
+import zm.unza.cict.specification.repository.SpecProfileRepository;
 
 import java.util.Comparator;
 import java.util.List;
@@ -18,6 +21,8 @@ import java.util.UUID;
 public class EquipmentCategoryService {
 
     private final EquipmentCategoryRepository categoryRepository;
+    private final SpecProfileRepository specProfileRepository;
+    private final RequestItemRepository requestItemRepository;
     private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
@@ -50,6 +55,13 @@ public class EquipmentCategoryService {
     public void delete(UUID id) {
         EquipmentCategory category = categoryRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Equipment category not found."));
+        // The FKs would silently null request items and cascade away its profiles, losing request history.
+        if (requestItemRepository.existsByCategoryId(id)) {
+            throw new BadRequestException("This category is used by existing requests. Retire it instead of deleting it.");
+        }
+        if (specProfileRepository.existsByCategoryId(id)) {
+            throw new BadRequestException("This category still has specification profiles. Delete or move them first, or retire the category.");
+        }
         auditLogService.log("EquipmentCategory", id.toString(), "delete", "Deleted category " + category.getCode());
         categoryRepository.deleteById(id);
     }

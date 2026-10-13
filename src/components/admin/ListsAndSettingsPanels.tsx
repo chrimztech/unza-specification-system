@@ -22,13 +22,29 @@ const LISTS: { key: string; label: string; help: string }[] = [
     label: "System roles",
     help: "Rename or hide system roles. The value must stay one of: requester, manager, cict_reviewer, cict_manager, procurement, auditor, admin.",
   },
-  { key: "position_level", label: "Position levels", help: "Staff levels used for eligibility and specification recommendations." },
+  {
+    key: "position_level",
+    label: "Position levels",
+    help: "Staff levels used for eligibility and specification recommendations.",
+  },
   { key: "request_type", label: "Request types", help: "Reasons a request may be raised." },
-  { key: "business_context", label: "Business contexts", help: "The University activity the equipment supports." },
+  {
+    key: "business_context",
+    label: "Business contexts",
+    help: "The University activity the equipment supports.",
+  },
   { key: "priority", label: "Priorities", help: "Urgency options on a request." },
-  { key: "budget_status", label: "Budget statuses", help: "Funding position declared by the requester." },
+  {
+    key: "budget_status",
+    label: "Budget statuses",
+    help: "Funding position declared by the requester.",
+  },
   { key: "spec_tier", label: "Specification tiers", help: "Tiers used by specification profiles." },
-  { key: "asset_class", label: "Asset classes", help: "Classification applied to equipment categories." },
+  {
+    key: "asset_class",
+    label: "Asset classes",
+    help: "Classification applied to equipment categories.",
+  },
   { key: "campus", label: "Campuses", help: "Campus options on staff profiles and units." },
 ];
 

@@ -80,8 +80,9 @@ function ReviewsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-semibold">CICT review queue</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="label-caps">Workflow</p>
+        <h1 className="mt-1 font-display text-3xl">CICT review queue</h1>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Technical review of equipment requests against approved standards, specification profiles
           and institutional rules.
         </p>
@@ -95,11 +96,11 @@ function ReviewsPage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-md border border-border bg-card p-5 shadow-panel">
+        <div className="surface p-5">
           <p className="label-caps">Awaiting review</p>
           <p className="mt-1 font-display text-3xl">{stats.pending}</p>
         </div>
-        <div className="rounded-md border border-border bg-card p-5 shadow-panel">
+        <div className="surface p-5">
           <p className="label-caps">Awaiting clarification</p>
           <p className="mt-1 font-display text-3xl">{stats.clarification}</p>
         </div>
@@ -133,7 +134,7 @@ function ReviewsPage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-md border border-border bg-card shadow-panel">
+      <div className="overflow-hidden surface">
         <table className="w-full text-sm">
           <thead className="bg-secondary/60">
             <tr className="text-left">
@@ -149,10 +150,7 @@ function ReviewsPage() {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td
-                  colSpan={7}
-                  className="px-4 py-8 text-center text-sm text-muted-foreground"
-                >
+                <td colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">
                   No requests match the current filter.
                 </td>
               </tr>

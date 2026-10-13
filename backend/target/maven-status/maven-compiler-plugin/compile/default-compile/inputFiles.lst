@@ -114,6 +114,7 @@ F:\unza-specification-system\backend\src\main\java\zm\unza\cict\specification\se
 F:\unza-specification-system\backend\src\main\java\zm\unza\cict\specification\service\AuditLogService.java
 F:\unza-specification-system\backend\src\main\java\zm\unza\cict\specification\service\AuthService.java
 F:\unza-specification-system\backend\src\main\java\zm\unza\cict\specification\service\DelegationService.java
+F:\unza-specification-system\backend\src\main\java\zm\unza\cict\specification\service\EmailService.java
 F:\unza-specification-system\backend\src\main\java\zm\unza\cict\specification\service\EquipmentCategoryService.java
 F:\unza-specification-system\backend\src\main\java\zm\unza\cict\specification\service\LookupValueService.java
 F:\unza-specification-system\backend\src\main\java\zm\unza\cict\specification\service\NotificationService.java

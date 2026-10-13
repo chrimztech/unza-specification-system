@@ -1,5 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  ClipboardCheck,
+  Clock3,
+  FileCheck2,
+  Files,
+  Plus,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRequests, unitName } from "@/lib/requests";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -27,80 +36,142 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
 
-function RequestTable({ rows, empty }: { rows: RequestResponse[]; empty: string }) {
-  if (rows.length === 0) {
-    return (
-      <p className="rounded-lg border border-dashed border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
-        {empty}
-      </p>
-    );
-  }
+type StatProps = {
+  label: string;
+  value: number;
+  hint: string;
+  icon: ReactNode;
+  tone: string;
+};
+
+function StatCard({ label, value, hint, icon, tone }: StatProps) {
   return (
-    <div className="surface overflow-hidden">
-      <table className="data-table text-sm">
-        <thead>
-          <tr>
-            <th>Reference</th>
-            <th>Title</th>
-            <th className="hidden md:table-cell">Unit</th>
-            <th className="hidden sm:table-cell">Required by</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.id}>
-              <td className="font-mono text-xs text-muted-foreground">
-                <Link
-                  to="/requests/$id"
-                  params={{ id: r.id }}
-                  className="underline-offset-4 hover:text-primary hover:underline"
-                >
-                  {r.reference}
-                </Link>
-              </td>
-              <td>
-                <Link
-                  to="/requests/$id"
-                  params={{ id: r.id }}
-                  className="font-medium underline-offset-4 hover:underline"
-                >
-                  {r.title || "Untitled request"}
-                </Link>
-                {r.priority && r.priority !== "normal" && (
-                  <span className="ml-2 rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-warning-foreground">
-                    {r.priority}
-                  </span>
-                )}
-              </td>
-              <td className="hidden text-muted-foreground md:table-cell">{unitName(r) || "—"}</td>
-              <td className="hidden text-muted-foreground sm:table-cell">
-                {formatDate(r.requiredBy)}
-              </td>
-              <td>
-                <StatusBadge status={r.status} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="surface group p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+          <p className="mt-2 font-display text-3xl font-extrabold tabular-nums tracking-tight">
+            {value}
+          </p>
+        </div>
+        <span className={`grid size-10 place-items-center rounded-xl ${tone}`}>{icon}</span>
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground/80">{hint}</p>
     </div>
   );
 }
 
+function RequestTable({
+  rows,
+  empty,
+  title,
+  description,
+  action,
+}: {
+  rows: RequestResponse[];
+  empty: string;
+  title: string;
+  description: string;
+  action?: ReactNode;
+}) {
+  return (
+    <section className="surface overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="font-display text-lg font-bold">{title}</h2>
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-bold text-muted-foreground">
+              {rows.length}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+        </div>
+        {action}
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="grid min-h-40 place-items-center px-6 py-10 text-center">
+          <div>
+            <span className="mx-auto grid size-10 place-items-center rounded-full bg-secondary text-muted-foreground">
+              <CheckCircle2 className="size-5" />
+            </span>
+            <p className="mt-3 text-sm font-medium">{empty}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              There is nothing requiring attention here.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="data-table min-w-[720px] text-sm">
+            <thead>
+              <tr>
+                <th>Reference</th>
+                <th>Request</th>
+                <th>Unit</th>
+                <th>Required by</th>
+                <th>Status</th>
+                <th aria-label="Open request" />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((request) => (
+                <tr key={request.id}>
+                  <td className="font-mono text-xs text-muted-foreground">{request.reference}</td>
+                  <td>
+                    <Link
+                      to="/requests/$id"
+                      params={{ id: request.id }}
+                      className="font-semibold text-foreground underline-offset-4 hover:text-primary hover:underline"
+                    >
+                      {request.title || "Untitled request"}
+                    </Link>
+                    {request.priority && request.priority !== "normal" && (
+                      <span className="ml-2 rounded-full bg-warning/15 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-warning-foreground">
+                        {request.priority}
+                      </span>
+                    )}
+                  </td>
+                  <td className="text-muted-foreground">{unitName(request) || "—"}</td>
+                  <td className="text-muted-foreground">{formatDate(request.requiredBy)}</td>
+                  <td>
+                    <StatusBadge status={request.status} />
+                  </td>
+                  <td className="w-12">
+                    <Link
+                      to="/requests/$id"
+                      params={{ id: request.id }}
+                      aria-label={`Open ${request.reference}`}
+                      className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-primary"
+                    >
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
 
 function Dashboard() {
   const { userId, isCict, isOversight, displayName } = useAuth();
   const requests = useRequests();
 
   const mine = useMemo(
-    () => (requests.data ?? []).filter((r) => r.requester.id === userId || r.submittedBy.id === userId),
+    () =>
+      (requests.data ?? []).filter(
+        (request) => request.requester.id === userId || request.submittedBy.id === userId,
+      ),
     [requests.data, userId],
   );
   const managerQueue = useMemo(
     () =>
       (requests.data ?? [])
-        .filter((r) => r.manager?.id === userId && r.status === "pending_manager")
+        .filter((request) => request.manager?.id === userId && request.status === "pending_manager")
         .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1)),
     [requests.data, userId],
   );
@@ -108,48 +179,80 @@ function Dashboard() {
     () =>
       isOversight
         ? (requests.data ?? [])
-            .filter((r) => r.status === "pending_cict" || r.status === "needs_clarification")
+            .filter(
+              (request) =>
+                request.status === "pending_cict" || request.status === "needs_clarification",
+            )
             .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))
         : [],
     [requests.data, isOversight],
   );
+  const recentMine = useMemo(
+    () => [...mine].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 8),
+    [mine],
+  );
 
-  const stats = [
-    { label: "My requests", value: mine.length, hint: "Raised by or for you" },
+  const firstName = displayName.split(" ")[0] || "there";
+  const today = new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date());
+  const inTechnicalReview = mine.filter(
+    (request) => request.status === "pending_cict" || request.status === "needs_clarification",
+  ).length;
+
+  const stats: StatProps[] = [
+    {
+      label: "My requests",
+      value: mine.length,
+      hint: "Raised by you or on your behalf",
+      icon: <Files className="size-5" />,
+      tone: "bg-primary/10 text-primary",
+    },
     {
       label: "Awaiting my approval",
       value: managerQueue.length,
-      hint: "Business need confirmation",
+      hint: "Business cases requiring action",
+      icon: <ClipboardCheck className="size-5" />,
+      tone: "bg-warning/15 text-warning-foreground",
     },
-    { label: "In CICT review", value: cictQueue.length, hint: "Technical assessment" },
     {
-      label: "Approved specifications",
-      value: mine.filter((r) => r.status === "approved").length,
-      hint: "Ready for procurement",
+      label: "In technical review",
+      value: inTechnicalReview,
+      hint: "Currently being assessed by CICT",
+      icon: <Clock3 className="size-5" />,
+      tone: "bg-info/10 text-info",
+    },
+    {
+      label: "Approved",
+      value: mine.filter((request) => request.status === "approved").length,
+      hint: "Specifications ready for procurement",
+      icon: <FileCheck2 className="size-5" />,
+      tone: "bg-success/10 text-success",
     },
   ];
 
   return (
-    <div className="space-y-10">
-      <section className="crest-header crest-header-motif overflow-hidden rounded-xl px-7 py-8 text-primary-foreground shadow-lift">
-        <div className="relative z-10 flex flex-wrap items-end justify-between gap-5">
+    <div className="space-y-7">
+      <section className="relative overflow-hidden rounded-2xl border border-primary/10 bg-card px-6 py-7 shadow-panel sm:px-8">
+        <div className="absolute inset-y-0 right-0 hidden w-[42%] bg-[radial-gradient(circle_at_75%_35%,color-mix(in_oklab,var(--color-accent)_28%,transparent),transparent_48%)] lg:block" />
+        <div className="relative flex flex-wrap items-center justify-between gap-5">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary-foreground/70">
-              Workspace
-            </p>
-            <h1 className="mt-2 font-display text-4xl">Good day, {displayName.split(" ")[0]}</h1>
-            <p className="mt-2 max-w-xl text-sm text-primary-foreground/80">
-              Everything routed to you across the specification workflow — approvals, technical
-              review and approved specification sheets.
+            <p className="text-xs font-semibold text-muted-foreground">{today}</p>
+            <h2 className="mt-1.5 font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
+              Welcome back, {firstName}
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              Review activity across your equipment requests and continue any work that needs your
+              attention.
             </p>
           </div>
-          <Button
-            asChild
-            variant="secondary"
-            size="lg"
-            className="rounded-full shadow-panel transition-transform hover:scale-[1.03]"
-          >
-            <Link to="/requests/new">Start a new request</Link>
+          <Button asChild size="lg" className="shadow-md">
+            <Link to="/requests/new">
+              <Plus />
+              Create request
+            </Link>
           </Button>
         </div>
       </section>
@@ -161,39 +264,59 @@ function Dashboard() {
         />
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((s) => (
-          <div key={s.label} className="stat-tile p-5 pl-6">
-            <div className="label-caps">{s.label}</div>
-            <div className="mt-2 font-display text-4xl tabular-nums">{s.value}</div>
-            <div className="mt-1 text-xs text-muted-foreground">{s.hint}</div>
-          </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat) => (
+          <StatCard key={stat.label} {...stat} />
         ))}
       </div>
 
       {managerQueue.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="gold-underline font-display text-xl">Awaiting your manager approval</h2>
-          <RequestTable rows={managerQueue} empty="Nothing awaiting your approval." />
-        </section>
+        <RequestTable
+          rows={managerQueue}
+          title="Awaiting your approval"
+          description="Business needs routed to you for a decision"
+          empty="You are all caught up"
+          action={
+            <Button asChild size="sm" variant="outline">
+              <Link to="/approvals">
+                View approvals <ArrowRight />
+              </Link>
+            </Button>
+          }
+        />
       )}
 
       {isOversight && (
-        <section className="space-y-4">
-          <h2 className="gold-underline font-display text-xl">
-            {isCict ? "CICT technical review queue" : "Requests in CICT review"}
-          </h2>
-          <RequestTable rows={cictQueue} empty="No requests are currently waiting for CICT." />
-        </section>
+        <RequestTable
+          rows={cictQueue}
+          title={isCict ? "CICT technical review" : "Requests in CICT review"}
+          description="Requests awaiting assessment or clarification"
+          empty="The review queue is clear"
+          action={
+            isCict ? (
+              <Button asChild size="sm" variant="outline">
+                <Link to="/reviews">
+                  Open queue <ArrowRight />
+                </Link>
+              </Button>
+            ) : undefined
+          }
+        />
       )}
 
-      <section className="space-y-4">
-        <h2 className="gold-underline font-display text-xl">My requests</h2>
-        <RequestTable
-          rows={mine}
-          empty="You have not raised any requests yet. Start one to see it here."
-        />
-      </section>
+      <RequestTable
+        rows={recentMine}
+        title="Recent requests"
+        description="The latest equipment requests raised by or for you"
+        empty="You have not raised any requests yet"
+        action={
+          <Button asChild size="sm" variant="ghost">
+            <Link to="/requests">
+              View all <ArrowRight />
+            </Link>
+          </Button>
+        }
+      />
     </div>
   );
 }

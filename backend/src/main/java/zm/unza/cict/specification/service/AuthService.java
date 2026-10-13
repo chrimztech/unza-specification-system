@@ -62,6 +62,7 @@ public class AuthService {
         user.setFullName(staff.fullName());
         if (manNumber != null) user.setStaffNumber(manNumber);
         if (staff.jobTitle() != null) user.setJobTitle(staff.jobTitle());
+        if (staff.positionLevel() != null) user.setPositionLevel(staff.positionLevel());
         if (staff.phone() != null) user.setPhone(staff.phone());
         user.setHrSyncedAt(Instant.now());
 

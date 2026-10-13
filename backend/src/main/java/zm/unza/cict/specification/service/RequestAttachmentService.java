@@ -120,7 +120,7 @@ public class RequestAttachmentService {
     public void delete(UUID attachmentId, AuthenticatedUser user) {
         RequestAttachment attachment = attachmentRepository.findById(attachmentId)
                 .orElseThrow(() -> new NotFoundException("Attachment not found."));
-        boolean owner = attachment.getUploadedBy().getId().equals(user.id());
+        boolean owner = attachment.getUploadedBy() != null && attachment.getUploadedBy().getId().equals(user.id());
         if (!owner && !user.isCict()) {
             throw new ForbiddenException("You cannot delete this attachment.");
         }
@@ -145,7 +145,7 @@ public class RequestAttachmentService {
     private RequestAttachmentResponse toResponse(RequestAttachment a) {
         return new RequestAttachmentResponse(
                 a.getId(), a.getRequest().getId(), a.getFileName(), a.getContentType(), a.getSizeBytes(),
-                a.getKind(), a.getUploadedBy().getId(), a.getCreatedAt()
+                a.getKind(), a.getUploadedBy() != null ? a.getUploadedBy().getId() : null, a.getCreatedAt()
         );
     }
 }

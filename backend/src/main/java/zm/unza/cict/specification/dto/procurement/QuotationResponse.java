@@ -14,6 +14,8 @@ public record QuotationResponse(
         BigDecimal amount,
         String currency,
         String notes,
+        UUID attachmentId,
+        String attachmentFileName,
         UserRefResponse submittedBy,
         Instant createdAt,
         List<EvaluationResponse> evaluations

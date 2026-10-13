@@ -69,7 +69,7 @@ export function DelegationPanel() {
   const incoming = (mine.data ?? []).filter((d) => d.delegate.id === userId);
 
   return (
-    <div className="space-y-5 rounded-md border border-border bg-card p-6 shadow-panel">
+    <div className="space-y-5 surface p-6">
       <div>
         <h2 className="font-display text-lg">Delegation of authority</h2>
         <p className="mt-1 text-sm text-muted-foreground">

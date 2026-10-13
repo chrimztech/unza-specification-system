@@ -49,7 +49,8 @@ function RequestsIndex() {
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
       .filter((r) => {
         if (status !== "all" && r.status !== status) return false;
-        if (scope === "mine" && r.requester.id !== userId && r.submittedBy.id !== userId) return false;
+        if (scope === "mine" && r.requester.id !== userId && r.submittedBy.id !== userId)
+          return false;
         if (scope === "approvals" && r.manager?.id !== userId) return false;
         if (q && !`${r.reference} ${r.title ?? ""} ${unitName(r) ?? ""}`.toLowerCase().includes(q))
           return false;
@@ -85,7 +86,6 @@ function RequestsIndex() {
     URL.revokeObjectURL(url);
   }
 
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -106,7 +106,6 @@ function RequestsIndex() {
             <Link to="/requests/new">New request</Link>
           </Button>
         </div>
-
       </div>
 
       {requests.isError && (
@@ -149,7 +148,7 @@ function RequestsIndex() {
           {requests.isLoading ? "Loading requests…" : "No requests match these filters."}
         </p>
       ) : (
-        <div className="overflow-hidden rounded-md border border-border bg-card shadow-panel">
+        <div className="overflow-hidden surface">
           <table className="w-full text-sm">
             <thead className="bg-secondary/60">
               <tr className="text-left">

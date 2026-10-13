@@ -18,6 +18,8 @@ public record RequestResponse(
         UserRefResponse onBehalfOf,
         OrgUnitResponse orgUnit,
         String orgUnitName,
+        String department,
+        String designation,
         UserRefResponse manager,
         String title,
         String justification,

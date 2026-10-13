@@ -37,6 +37,10 @@ public class RequestQuotation {
     private String notes;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "attachment_id")
+    private RequestAttachment attachment;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "submitted_by")
     private User submittedBy;
 

@@ -30,8 +30,7 @@ export const Route = createFileRoute("/_authenticated/approvals")({
       { property: "og:title", content: "Manager approvals · UNZA CICT" },
       {
         property: "og:description",
-        content:
-          "Review and confirm business need for equipment requests routed to you.",
+        content: "Review and confirm business need for equipment requests routed to you.",
       },
     ],
   }),
@@ -91,8 +90,9 @@ function ApprovalsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-semibold">Manager approvals</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="label-caps">Workflow</p>
+        <h1 className="mt-1 font-display text-3xl">Manager approvals</h1>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Confirm the business need, ownership and accuracy of equipment requests routed to you.
         </p>
       </div>
@@ -105,7 +105,7 @@ function ApprovalsPage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-md border border-border bg-card p-5 shadow-panel">
+        <div className="surface p-5">
           <p className="label-caps">Awaiting your decision</p>
           <p className="mt-1 font-display text-3xl">{pendingCount}</p>
         </div>
@@ -139,7 +139,7 @@ function ApprovalsPage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-md border border-border bg-card shadow-panel">
+      <div className="overflow-hidden surface">
         <table className="w-full text-sm">
           <thead className="bg-secondary/60">
             <tr className="text-left">
@@ -155,10 +155,7 @@ function ApprovalsPage() {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td
-                  colSpan={7}
-                  className="px-4 py-8 text-center text-sm text-muted-foreground"
-                >
+                <td colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">
                   No requests match the current filter.
                 </td>
               </tr>
@@ -206,8 +203,8 @@ function ApprovalsPage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Approve the business need, return for correction, or reject with a reason. CICT will
-        review approved requests against technical standards.
+        Approve the business need, return for correction, or reject with a reason. CICT will review
+        approved requests against technical standards.
       </p>
     </div>
   );

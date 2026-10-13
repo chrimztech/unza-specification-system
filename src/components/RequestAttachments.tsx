@@ -72,7 +72,7 @@ export function RequestAttachments({ requestId }: { requestId: string }) {
   });
 
   return (
-    <div className="rounded-md border border-border bg-card p-4 shadow-panel">
+    <div className="surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-display text-lg">Supporting documents</h2>
         <div>
@@ -123,7 +123,8 @@ export function RequestAttachments({ requestId }: { requestId: string }) {
                 size="sm"
                 disabled={remove.isPending}
                 onClick={() => {
-                  if (confirm(`Remove "${a.fileName}"? This cannot be undone.`)) remove.mutate(a.id);
+                  if (confirm(`Remove "${a.fileName}"? This cannot be undone.`))
+                    remove.mutate(a.id);
                 }}
               >
                 <Trash2 className="size-4" />

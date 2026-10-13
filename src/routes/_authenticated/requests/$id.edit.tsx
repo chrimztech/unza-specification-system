@@ -3,7 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiGet, apiPut, ApiError } from "@/lib/api-client";
-import type { EquipmentCategoryResponse, RequestResponse, UserResponse } from "@/lib/api-types";
+import type {
+  EquipmentCategoryResponse,
+  OrgUnitResponse,
+  RequestResponse,
+  UserResponse,
+} from "@/lib/api-types";
 import { useAuth } from "@/hooks/useAuth";
 import { useLookup } from "@/hooks/useLookups";
 import { Button } from "@/components/ui/button";
@@ -13,10 +18,35 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+const ASSET_CLASS_ORDER = [
+  "End-user computing",
+  "Peripheral",
+  "Networking",
+  "Software",
+  "Audio visual",
+  "Server and datacentre",
+  "Power and protection",
+];
+
+function assetClassRank(assetClass: string | null) {
+  const index = ASSET_CLASS_ORDER.indexOf(assetClass ?? "");
+  return index === -1 ? ASSET_CLASS_ORDER.length : index;
+}
+
+/** Mirrors the Standard/Enhanced/Specialised volume bands SpecProfileService.recommend() escalates on. */
+function printerSuitability(numberOfUsers: number | null) {
+  if (!numberOfUsers || numberOfUsers <= 1) return "Personal printer — 1 user";
+  if (numberOfUsers <= 5) return "Standard — suits up to 5 users";
+  if (numberOfUsers <= 15) return "Enhanced — suits 6–15 shared users";
+  return "Specialised — suits 16+ high-volume shared users";
+}
 
 export const Route = createFileRoute("/_authenticated/requests/$id/edit")({
   head: () => ({
@@ -46,9 +76,13 @@ type Item = {
   quantity: number;
   purpose: string;
   intended_users: string;
+  number_of_users: number | null;
   location: string;
+  designation: string;
+  designation_other: string;
   is_shared: boolean;
   required_software: string;
+  software_category: string;
   proposed_spec: string;
 };
 
@@ -59,9 +93,13 @@ function emptyItem(): Item {
     quantity: 1,
     purpose: "",
     intended_users: "",
+    number_of_users: null,
     location: "",
+    designation: "",
+    designation_other: "",
     is_shared: false,
     required_software: "",
+    software_category: "",
     proposed_spec: "",
   };
 }
@@ -75,13 +113,18 @@ function EditRequest() {
   const businessContexts = useLookup("business_context");
   const priorities = useLookup("priority");
   const budgetStatuses = useLookup("budget_status");
+  const softwareCategories = useLookup("software_category");
+  const designations = useLookup("designation");
 
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [onBehalfOfOther, setOnBehalfOfOther] = useState(false);
+  const [designationOther, setDesignationOther] = useState("");
   const [form, setForm] = useState({
-    reference: "",
     title: "",
+    unit_id: "",
+    department: "",
+    designation: "",
     request_type: "",
     business_context: "",
     justification: "",
@@ -110,8 +153,36 @@ function EditRequest() {
     queryFn: () => apiGet<EquipmentCategoryResponse[]>("/api/equipment-categories"),
   });
   const activeCategories = useMemo(
-    () => (categories.data ?? []).filter((c) => c.active).sort((a, b) => a.sortOrder - b.sortOrder),
+    () =>
+      (categories.data ?? [])
+        .filter((c) => c.active)
+        .sort(
+          (a, b) =>
+            assetClassRank(a.assetClass) - assetClassRank(b.assetClass) ||
+            a.sortOrder - b.sortOrder,
+        ),
     [categories.data],
+  );
+  const categoriesByAssetClass = useMemo(() => {
+    const groups = new Map<string, EquipmentCategoryResponse[]>();
+    for (const c of activeCategories) {
+      const key = c.assetClass ?? "Other";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(c);
+    }
+    return groups;
+  }, [activeCategories]);
+
+  const orgUnits = useQuery({
+    queryKey: ["org-units"],
+    queryFn: () => apiGet<OrgUnitResponse[]>("/api/org-units"),
+  });
+  const unitOptions = useMemo(
+    () =>
+      (orgUnits.data ?? [])
+        .filter((u) => u.active && u.unitType !== "department")
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [orgUnits.data],
   );
 
   const managers = useQuery({
@@ -128,15 +199,18 @@ function EditRequest() {
 
   useEffect(() => {
     if (!r || loaded) return;
+    const knownDesignation = designations.some((d) => d.value === r.designation);
     setForm({
-      reference: r.reference ?? "",
       title: r.title ?? "",
+      unit_id: r.orgUnit?.id ?? "",
+      department: r.department ?? "",
+      designation: r.designation ? (knownDesignation ? r.designation : "Other") : "",
       request_type: r.requestType ?? "",
       business_context: r.businessContext ?? "",
       justification: r.justification ?? "",
       impact_if_not_provided: r.impactIfNotProvided ?? "",
       on_behalf_of_id: r.onBehalfOf?.id ?? "",
-      requested_for: r.onBehalfOf ? "" : r.requestedFor ?? "",
+      requested_for: r.onBehalfOf ? "" : (r.requestedFor ?? ""),
       existing_asset_tag: r.existingAssetTag ?? "",
       replacement_reason: r.replacementReason ?? "",
       priority: r.priority ?? "normal",
@@ -148,6 +222,7 @@ function EditRequest() {
       manager_id: r.manager?.id ?? "",
     });
     setOnBehalfOfOther(!r.onBehalfOf && !!r.requestedFor);
+    setDesignationOther(r.designation && !knownDesignation ? r.designation : "");
     const rows = [...r.items].sort((a, b) => a.sortOrder - b.sortOrder);
     setItems(
       rows.length
@@ -158,19 +233,36 @@ function EditRequest() {
             quantity: i.quantity ?? 1,
             purpose: i.purpose ?? "",
             intended_users: i.intendedUsers ?? "",
+            number_of_users: i.numberOfUsers ?? null,
             location: i.location ?? "",
+            designation: i.designation
+              ? designations.some((d) => d.value === i.designation)
+                ? i.designation
+                : "Other"
+              : "",
+            designation_other:
+              i.designation && !designations.some((d) => d.value === i.designation)
+                ? i.designation
+                : "",
             is_shared: !!i.isShared,
             required_software: i.requiredSoftware ?? "",
+            software_category: i.softwareCategory ?? "",
             proposed_spec: i.proposedSpec ?? "",
           }))
         : [emptyItem()],
     );
     setLoaded(true);
-  }, [r, loaded]);
+  }, [r, loaded, designations]);
 
   const costById = useMemo(() => {
     const map = new Map<string, number>();
     for (const c of activeCategories) map.set(c.id, Number(c.indicativeUnitCost ?? 0));
+    return map;
+  }, [activeCategories]);
+
+  const categoryById = useMemo(() => {
+    const map = new Map<string, EquipmentCategoryResponse>();
+    for (const c of activeCategories) map.set(c.id, c);
     return map;
   }, [activeCategories]);
 
@@ -180,7 +272,8 @@ function EditRequest() {
   );
 
   if (request.isLoading) return <p className="text-sm text-muted-foreground">Loading draft…</p>;
-  if (!r) return <p className="text-sm text-muted-foreground">This request is not available to you.</p>;
+  if (!r)
+    return <p className="text-sm text-muted-foreground">This request is not available to you.</p>;
 
   const isOwner = r.requester.id === userId || r.submittedBy.id === userId;
   if (!isOwner || r.status !== "draft") {
@@ -211,13 +304,28 @@ function EditRequest() {
   }
 
   const issues = [
-    form.reference.trim().length > 2 ? "" : "Enter the CICT Help Desk ticket number for this request.",
     form.title.trim().length > 2 ? "" : "Add a descriptive request title.",
+    form.unit_id ? "" : "Select your Unit/School.",
+    form.department.trim() ? "" : "Enter your department.",
+    form.designation && (form.designation !== "Other" || designationOther.trim())
+      ? ""
+      : "Enter the designation of the intended user.",
     form.request_type ? "" : "Select the request type.",
+    form.business_context ? "" : "Select the business context.",
     form.justification.trim().length > 10 ? "" : "Give a business justification.",
     items.length ? "" : "Add at least one equipment item.",
     items.every((i) => i.category_id) ? "" : "Every item needs an equipment category.",
     items.every((i) => i.purpose.trim()) ? "" : "Describe what each item will be used for.",
+    items.every(
+      (i) => categoryById.get(i.category_id)?.code !== "PRINTER" || (i.number_of_users ?? 0) > 0,
+    )
+      ? ""
+      : "Specify the number of users for each printer.",
+    items.every(
+      (i) => categoryById.get(i.category_id)?.assetClass !== "Software" || i.software_category,
+    )
+      ? ""
+      : "Select a software category for each software item.",
   ].filter(Boolean);
 
   async function save(submit: boolean) {
@@ -228,9 +336,16 @@ function EditRequest() {
     }
     setBusy(true);
     try {
+      const selectedUnit = unitOptions.find((u) => u.id === form.unit_id);
       await apiPut<RequestResponse>(`/api/requests/${r.id}?submit=${submit}`, {
-        reference: form.reference,
         title: form.title,
+        orgUnitId: form.unit_id || undefined,
+        orgUnitName: selectedUnit?.name,
+        department: form.department || undefined,
+        designation:
+          form.designation === "Other"
+            ? designationOther || undefined
+            : form.designation || undefined,
         requestType: form.request_type,
         businessContext: form.business_context,
         justification: form.justification,
@@ -254,9 +369,15 @@ function EditRequest() {
           quantity: item.quantity,
           purpose: item.purpose,
           intendedUsers: item.intended_users || undefined,
+          numberOfUsers: item.number_of_users ?? undefined,
           location: item.location || undefined,
+          designation:
+            item.designation === "Other"
+              ? item.designation_other || undefined
+              : item.designation || undefined,
           isShared: item.is_shared,
           requiredSoftware: item.required_software || undefined,
+          softwareCategory: item.software_category || undefined,
           proposedSpec: item.proposed_spec || undefined,
           sortOrder: index,
         })),
@@ -292,21 +413,59 @@ function EditRequest() {
         </ul>
       )}
 
-      <section className="space-y-4 rounded-md border border-border bg-card p-5 shadow-panel">
+      <section className="space-y-4 surface p-5">
         <h2 className="font-display text-xl">Business case</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="reference">CICT Help Desk ticket number</Label>
+            <Label htmlFor="title">Request title</Label>
+            <Input id="title" value={form.title} onChange={(e) => set("title", e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Unit / School</Label>
+            <Select value={form.unit_id} onValueChange={(v) => set("unit_id", v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select your unit or school" />
+              </SelectTrigger>
+              <SelectContent>
+                {unitOptions.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="department">Department</Label>
             <Input
-              id="reference"
-              value={form.reference}
-              onChange={(e) => set("reference", e.target.value)}
-              placeholder="e.g. HD-2026-00123"
+              id="department"
+              value={form.department}
+              onChange={(e) => set("department", e.target.value)}
+              placeholder="Dean's office"
             />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="title">Request title</Label>
-            <Input id="title" value={form.title} onChange={(e) => set("title", e.target.value)} />
+            <Label>Designation of intended user</Label>
+            <Select value={form.designation} onValueChange={(v) => set("designation", v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a designation" />
+              </SelectTrigger>
+              <SelectContent>
+                {designations.map((d) => (
+                  <SelectItem key={d.value} value={d.value}>
+                    {d.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.designation === "Other" && (
+              <Input
+                className="mt-1.5"
+                value={designationOther}
+                onChange={(e) => setDesignationOther(e.target.value)}
+                placeholder="Please specify the designation"
+              />
+            )}
           </div>
           <div className="space-y-1.5">
             <Label>Request type</Label>
@@ -417,7 +576,7 @@ function EditRequest() {
         </div>
       </section>
 
-      <section className="space-y-4 rounded-md border border-border bg-card p-5 shadow-panel">
+      <section className="space-y-4 surface p-5">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-xl">Equipment items</h2>
           <Button variant="outline" size="sm" onClick={() => setItems((p) => [...p, emptyItem()])}>
@@ -445,10 +604,15 @@ function EditRequest() {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {activeCategories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
+                    {Array.from(categoriesByAssetClass.entries()).map(([assetClass, cats]) => (
+                      <SelectGroup key={assetClass}>
+                        <SelectLabel>{assetClass}</SelectLabel>
+                        {cats.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     ))}
                   </SelectContent>
                 </Select>
@@ -472,19 +636,65 @@ function EditRequest() {
                   onChange={(e) => patchItem(item.key, { purpose: e.target.value })}
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label>Intended users</Label>
-                <Input
-                  value={item.intended_users}
-                  onChange={(e) => patchItem(item.key, { intended_users: e.target.value })}
-                />
-              </div>
+              {categoryById.get(item.category_id)?.code === "PRINTER" ? (
+                <div className="space-y-1.5">
+                  <Label>Number of users</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10000}
+                    value={item.number_of_users ?? ""}
+                    onChange={(e) =>
+                      patchItem(item.key, {
+                        number_of_users: e.target.value ? Number(e.target.value) : null,
+                      })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {printerSuitability(item.number_of_users)}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label>Intended users</Label>
+                  <Input
+                    value={item.intended_users}
+                    onChange={(e) => patchItem(item.key, { intended_users: e.target.value })}
+                  />
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Location / office</Label>
                 <Input
                   value={item.location}
                   onChange={(e) => patchItem(item.key, { location: e.target.value })}
                 />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>Designation of this item's user (optional)</Label>
+                <Select
+                  value={item.designation}
+                  onValueChange={(v) => patchItem(item.key, { designation: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Defaults to the request's designation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {designations.map((d) => (
+                      <SelectItem key={d.value} value={d.value}>
+                        {d.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {item.designation === "Other" && (
+                  <Input
+                    className="mt-1.5"
+                    value={item.designation_other}
+                    onChange={(e) => patchItem(item.key, { designation_other: e.target.value })}
+                    placeholder="Please specify the designation"
+                  />
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label>Required software</Label>
@@ -493,6 +703,26 @@ function EditRequest() {
                   onChange={(e) => patchItem(item.key, { required_software: e.target.value })}
                 />
               </div>
+              {categoryById.get(item.category_id)?.assetClass === "Software" && (
+                <div className="space-y-1.5">
+                  <Label>Software category</Label>
+                  <Select
+                    value={item.software_category}
+                    onValueChange={(v) => patchItem(item.key, { software_category: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {softwareCategories.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Proposed specification</Label>
                 <Input
@@ -516,7 +746,7 @@ function EditRequest() {
         </p>
       </section>
 
-      <section className="space-y-4 rounded-md border border-border bg-card p-5 shadow-panel">
+      <section className="space-y-4 surface p-5">
         <h2 className="font-display text-xl">Funding, timing & approval</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">

@@ -30,7 +30,18 @@ public class UserController {
 
     @PatchMapping("/me")
     public UserResponse updateMyProfile(@RequestBody UpdateProfileRequest req) {
-        return userService.updateProfile(CurrentUser.get().id(), req);
+        var user = CurrentUser.get();
+        // Position level and unit drive manager routing and spec tiers, so staff can't self-assign them.
+        if (!user.isAdmin() && (req.positionLevel() != null || req.orgUnitId() != null)) {
+            throw new ForbiddenException("Position level and organisational unit are maintained by HR.");
+        }
+        return userService.updateProfile(user.id(), req);
+    }
+
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable UUID id) {
+        requireAdmin();
+        userService.delete(id, CurrentUser.get().id());
     }
 
     /** Mirrors the old `user_roles` RLS: everyone sees their own assignments, oversight roles see all. */

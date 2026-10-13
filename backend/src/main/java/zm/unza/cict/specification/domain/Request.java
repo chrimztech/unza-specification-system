@@ -49,6 +49,11 @@ public class Request {
     @Column(name = "org_unit_name")
     private String orgUnitName;
 
+    private String department;
+
+    @Column(name = "designation")
+    private String designation;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_id")
     private User manager;

@@ -19,11 +19,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ProcurementPipelineIntegrationTest extends AbstractIntegrationTest {
 
     /** Creates, submits and fully approves a request (self as manager), returning its id. */
-    private String approvedRequestId(String token, String categoryId, String reference) throws Exception {
+    private String approvedRequestId(String token, String categoryId) throws Exception {
+        String orgUnitId = anyOrgUnitId(token);
         String created = mockMvc.perform(post("/api/requests?submit=false")
                         .header("Authorization", bearer(token))
                         .contentType("application/json")
-                        .content("{\"reference\":\"%s\",\"title\":\"Pipeline test\"}".formatted(reference)))
+                        .content("{\"title\":\"Pipeline test\"}"))
                 .andReturn().getResponse().getContentAsString();
         String id = objectMapper.readTree(created).get("id").asText();
         String userId = objectMapper.readTree(created).get("requester").get("id").asText();
@@ -32,11 +33,12 @@ class ProcurementPipelineIntegrationTest extends AbstractIntegrationTest {
                         .header("Authorization", bearer(token))
                         .contentType("application/json")
                         .content("""
-                                {"justification":"Because I need it","requestType":"New requirement",
+                                {"orgUnitId":"%s","department":"Dean's office","designation":"Officer",
+                                 "justification":"Because I need it","requestType":"New requirement",
                                  "businessContext":"Administration","managerId":"%s",
                                  "declarationAccepted":true,
                                  "items":[{"categoryId":"%s","quantity":1,"purpose":"testing"}]}
-                                """.formatted(userId, categoryId)))
+                                """.formatted(orgUnitId, userId, categoryId)))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/requests/" + id + "/manager-decision")
@@ -71,7 +73,7 @@ class ProcurementPipelineIntegrationTest extends AbstractIntegrationTest {
         grantRole(staff.email(), AppRole.ADMIN);
         String categoryId = anyEquipmentCategoryId(token);
 
-        String id = approvedRequestId(token, categoryId, "HD-HAPPY-" + System.nanoTime());
+        String id = approvedRequestId(token, categoryId);
         String quotationId = addQuotation(token, id, "Acme", 1000);
 
         mockMvc.perform(post("/api/requests/" + id + "/quotations/" + quotationId + "/evaluate")
@@ -111,7 +113,7 @@ class ProcurementPipelineIntegrationTest extends AbstractIntegrationTest {
         grantRole(staff.email(), AppRole.ADMIN);
         String categoryId = anyEquipmentCategoryId(token);
 
-        String id = approvedRequestId(token, categoryId, "HD-NOREASON-" + System.nanoTime());
+        String id = approvedRequestId(token, categoryId);
         String quotationId = addQuotation(token, id, "Acme", 1000);
 
         mockMvc.perform(post("/api/requests/" + id + "/quotations/" + quotationId + "/evaluate")
@@ -128,7 +130,7 @@ class ProcurementPipelineIntegrationTest extends AbstractIntegrationTest {
         grantRole(staff.email(), AppRole.ADMIN);
         String categoryId = anyEquipmentCategoryId(token);
 
-        String id = approvedRequestId(token, categoryId, "HD-FAILPURCHASE-" + System.nanoTime());
+        String id = approvedRequestId(token, categoryId);
         String quotationId = addQuotation(token, id, "BadVendor", 1000);
 
         mockMvc.perform(post("/api/requests/" + id + "/quotations/" + quotationId + "/evaluate")
@@ -151,7 +153,7 @@ class ProcurementPipelineIntegrationTest extends AbstractIntegrationTest {
         grantRole(staff.email(), AppRole.ADMIN);
         String categoryId = anyEquipmentCategoryId(token);
 
-        String id = approvedRequestId(token, categoryId, "HD-RETURN-" + System.nanoTime());
+        String id = approvedRequestId(token, categoryId);
         String quotationId = addQuotation(token, id, "Acme", 1000);
 
         mockMvc.perform(post("/api/requests/" + id + "/quotations/" + quotationId + "/evaluate")

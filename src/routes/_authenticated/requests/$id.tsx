@@ -83,7 +83,8 @@ function RequestDetail() {
   if (request.isLoading) return <p className="text-sm text-muted-foreground">Loading request…</p>;
   if (request.isError) {
     const deniedOrMissing =
-      request.error instanceof ApiError && (request.error.status === 403 || request.error.status === 404);
+      request.error instanceof ApiError &&
+      (request.error.status === 403 || request.error.status === 404);
     if (!deniedOrMissing) {
       return (
         <QueryError
@@ -93,7 +94,8 @@ function RequestDetail() {
       );
     }
   }
-  if (!r) return <p className="text-sm text-muted-foreground">This request is not available to you.</p>;
+  if (!r)
+    return <p className="text-sm text-muted-foreground">This request is not available to you.</p>;
 
   const isRequester = r.requester.id === userId || r.submittedBy.id === userId;
   const isManager = r.manager?.id === userId;
@@ -102,7 +104,6 @@ function RequestDetail() {
   const canWithdraw =
     isRequester &&
     ["draft", "pending_manager", "pending_cict", "needs_clarification"].includes(r.status);
-  const canSubmitDraft = isRequester && r.status === "draft" && !!r.manager;
   const canRespond = isRequester && r.status === "needs_clarification";
 
   function refresh() {
@@ -130,11 +131,6 @@ function RequestDetail() {
     }
   }
 
-  const submitDraft = () =>
-    runAction("Request submitted for manager approval", () =>
-      apiPost(`/api/requests/${r.id}/submit`),
-    );
-
   const respondToClarification = () =>
     runAction(
       "Response sent to CICT",
@@ -146,8 +142,17 @@ function RequestDetail() {
       true,
     );
 
-  const managerDecision = (decision: "approved" | "rejected" | "returned", label: string, requireNote = false) =>
-    runAction(label, () => apiPost(`/api/requests/${r.id}/manager-decision`, { decision, note: note || undefined }), requireNote);
+  const managerDecision = (
+    decision: "approved" | "rejected" | "returned",
+    label: string,
+    requireNote = false,
+  ) =>
+    runAction(
+      label,
+      () =>
+        apiPost(`/api/requests/${r.id}/manager-decision`, { decision, note: note || undefined }),
+      requireNote,
+    );
 
   const cictDecision = (
     decision: "approved" | "rejected" | "needs_clarification",
@@ -171,7 +176,8 @@ function RequestDetail() {
       requireNote,
     );
 
-  const withdraw = () => runAction("Requester withdrew the request", () => apiPost(`/api/requests/${r.id}/withdraw`));
+  const withdraw = () =>
+    runAction("Requester withdrew the request", () => apiPost(`/api/requests/${r.id}/withdraw`));
 
   async function deleteDraft() {
     if (!r || !confirm("Delete this draft permanently?")) return;
@@ -201,6 +207,49 @@ function RequestDetail() {
         <StatusBadge status={r.status} />
       </header>
 
+      <div className="flex flex-wrap gap-2">
+        <Button asChild size="sm" variant="outline">
+          <Link to="/requests/$id/print" params={{ id: r.id }}>
+            Printable request form
+          </Link>
+        </Button>
+        {[
+          "approved",
+          "procurement",
+          "purchased",
+          "in_stores",
+          "completed",
+          "return_required",
+        ].includes(r.status) && (
+          <Button asChild size="sm" variant="outline">
+            <Link to="/requests/$id/spec-sheet" params={{ id: r.id }}>
+              Specification sheet
+            </Link>
+          </Button>
+        )}
+        {["purchased", "in_stores", "completed", "return_required"].includes(r.status) && (
+          <Button asChild size="sm" variant="outline">
+            <Link to="/requests/$id/purchase-order" params={{ id: r.id }}>
+              Purchase order
+            </Link>
+          </Button>
+        )}
+        {["in_stores", "completed", "return_required"].includes(r.status) && (
+          <Button asChild size="sm" variant="outline">
+            <Link to="/requests/$id/stores-receipt" params={{ id: r.id }}>
+              Stores receipt
+            </Link>
+          </Button>
+        )}
+        {["completed", "return_required"].includes(r.status) && (
+          <Button asChild size="sm" variant="outline">
+            <Link to="/requests/$id/verification-certificate" params={{ id: r.id }}>
+              Verification certificate
+            </Link>
+          </Button>
+        )}
+      </div>
+
       {isRequester && r.status === "draft" && (
         <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-secondary/40 p-4">
           <p className="mr-auto text-sm text-muted-foreground">
@@ -208,7 +257,7 @@ function RequestDetail() {
           </p>
           <Button asChild size="sm" variant="outline">
             <Link to="/requests/$id/edit" params={{ id: r.id }}>
-              Edit draft
+              Complete & submit
             </Link>
           </Button>
           <Button size="sm" variant="destructive" disabled={busy} onClick={deleteDraft}>
@@ -216,7 +265,6 @@ function RequestDetail() {
           </Button>
         </div>
       )}
-
 
       {r.status === "approved" && (
         <div className="rounded-md border border-success/30 bg-success/10 p-5">
@@ -234,12 +282,16 @@ function RequestDetail() {
         </div>
       )}
 
-
       <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <div className="space-y-6">
-          <div className="rounded-md border border-border bg-card shadow-panel">
+          <div className="surface">
             <h2 className="border-b border-border px-4 py-3 font-display text-lg">Business case</h2>
             <dl className="divide-y divide-border">
+              <Field label="Requester" value={r.requester.fullName} />
+              <Field label="Requester email" value={r.requester.email} />
+              <Field label="Unit / School" value={r.orgUnit?.name ?? r.orgUnitName} />
+              <Field label="Department" value={r.department} />
+              <Field label="Designation of intended user" value={r.designation} />
               <Field label="Request type" value={r.requestType} />
               <Field label="Business context" value={r.businessContext} />
               <Field label="Justification" value={r.justification} />
@@ -247,9 +299,7 @@ function RequestDetail() {
               <Field
                 label="Requested on behalf of"
                 value={
-                  r.onBehalfOf
-                    ? `${r.onBehalfOf.fullName} (${r.onBehalfOf.email})`
-                    : r.requestedFor
+                  r.onBehalfOf ? `${r.onBehalfOf.fullName} (${r.onBehalfOf.email})` : r.requestedFor
                 }
               />
               <Field label="Existing asset tag" value={r.existingAssetTag} />
@@ -257,8 +307,10 @@ function RequestDetail() {
             </dl>
           </div>
 
-          <div className="rounded-md border border-border bg-card shadow-panel">
-            <h2 className="border-b border-border px-4 py-3 font-display text-lg">Equipment items</h2>
+          <div className="surface">
+            <h2 className="border-b border-border px-4 py-3 font-display text-lg">
+              Equipment items
+            </h2>
             <div className="divide-y divide-border">
               {r.items.map((item, index) => {
                 const categoryProfiles = (specProfiles.data ?? []).filter(
@@ -276,9 +328,18 @@ function RequestDetail() {
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{item.purpose}</p>
                     <div className="mt-2 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
-                      <span>Users: {item.intendedUsers || "—"}</span>
+                      <span>
+                        Users:{" "}
+                        {item.numberOfUsers
+                          ? `${item.numberOfUsers} users`
+                          : item.intendedUsers || "—"}
+                      </span>
                       <span>Location: {item.location || "—"}</span>
+                      <span>Designation: {item.designation || r.designation || "—"}</span>
                       <span>Software: {item.requiredSoftware || "—"}</span>
+                      {item.softwareCategory && (
+                        <span>Software category: {item.softwareCategory}</span>
+                      )}
                       <span>Proposed: {item.proposedSpec || "—"}</span>
                     </div>
                     {item.approvedProfile ? (
@@ -297,7 +358,8 @@ function RequestDetail() {
                       </div>
                     ) : item.recommendedProfile ? (
                       <p className="mt-3 text-xs text-info">
-                        Indicative tier: {item.recommendedProfile.tier} — {item.recommendedProfile.name}
+                        Indicative tier: {item.recommendedProfile.tier} —{" "}
+                        {item.recommendedProfile.name}
                       </p>
                     ) : null}
 
@@ -331,7 +393,7 @@ function RequestDetail() {
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-md border border-border bg-card shadow-panel">
+          <div className="surface">
             <h2 className="border-b border-border px-4 py-3 font-display text-lg">
               Funding & timing
             </h2>
@@ -345,8 +407,8 @@ function RequestDetail() {
             </dl>
           </div>
 
-          {(canManagerAct || canCictAct || canWithdraw || canSubmitDraft || canRespond) && (
-            <div className="rounded-md border border-border bg-card p-4 shadow-panel">
+          {(canManagerAct || canCictAct || canWithdraw || canRespond) && (
+            <div className="surface p-4">
               <h2 className="font-display text-lg">Actions</h2>
               {(canManagerAct || canCictAct || canRespond) && (
                 <div className="mt-3 space-y-1.5">
@@ -366,30 +428,31 @@ function RequestDetail() {
                     Send response to CICT
                   </Button>
                 )}
-                {canSubmitDraft && (
-                  <Button disabled={busy} onClick={submitDraft}>
-                    Submit for approval
-                  </Button>
-                )}
                 {canManagerAct && (
                   <>
                     <Button
                       disabled={busy}
-                      onClick={() => managerDecision("approved", "Manager approved the business need")}
+                      onClick={() =>
+                        managerDecision("approved", "Manager approved the business need")
+                      }
                     >
                       Approve business need
                     </Button>
                     <Button
                       variant="outline"
                       disabled={busy}
-                      onClick={() => managerDecision("returned", "Returned to requester for correction", true)}
+                      onClick={() =>
+                        managerDecision("returned", "Returned to requester for correction", true)
+                      }
                     >
                       Return for correction
                     </Button>
                     <Button
                       variant="destructive"
                       disabled={busy}
-                      onClick={() => managerDecision("rejected", "Manager rejected the request", true)}
+                      onClick={() =>
+                        managerDecision("rejected", "Manager rejected the request", true)
+                      }
                     >
                       Reject
                     </Button>
@@ -399,14 +462,18 @@ function RequestDetail() {
                   <>
                     <Button
                       disabled={busy}
-                      onClick={() => cictDecision("approved", "CICT approved the technical specification")}
+                      onClick={() =>
+                        cictDecision("approved", "CICT approved the technical specification")
+                      }
                     >
                       Approve specification
                     </Button>
                     <Button
                       variant="outline"
                       disabled={busy}
-                      onClick={() => cictDecision("needs_clarification", "CICT requested clarification", true)}
+                      onClick={() =>
+                        cictDecision("needs_clarification", "CICT requested clarification", true)
+                      }
                     >
                       Request clarification
                     </Button>
@@ -430,8 +497,7 @@ function RequestDetail() {
 
           <RequestAttachments requestId={id} />
 
-          <div className="rounded-md border border-border bg-card p-4 shadow-panel">
-
+          <div className="surface p-4">
             <h2 className="font-display text-lg">Audit trail</h2>
             <ol className="mt-3 space-y-4">
               {sortedEvents.map((e) => (

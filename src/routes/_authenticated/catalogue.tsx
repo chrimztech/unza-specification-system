@@ -16,7 +16,8 @@ export const Route = createFileRoute("/_authenticated/catalogue")({
       { property: "og:title", content: "Specification catalogue · UNZA CICT" },
       {
         property: "og:description",
-        content: "Standard, Enhanced and Specialised equipment specification profiles approved by CICT.",
+        content:
+          "Standard, Enhanced and Specialised equipment specification profiles approved by CICT.",
       },
     ],
   }),
@@ -34,7 +35,9 @@ function Catalogue() {
   });
 
   const data = useMemo(() => {
-    const active = (categories.data ?? []).filter((c) => c.active).sort((a, b) => a.sortOrder - b.sortOrder);
+    const active = (categories.data ?? [])
+      .filter((c) => c.active)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
     return active.map((cat) => ({
       ...cat,
       specProfiles: (profiles.data ?? []).filter((p) => p.categoryId === cat.id && p.active),
@@ -54,7 +57,7 @@ function Catalogue() {
 
       <div className="space-y-6">
         {data.map((cat) => (
-          <section key={cat.id} className="rounded-md border border-border bg-card shadow-panel">
+          <section key={cat.id} className="surface">
             <header className="border-b border-border px-5 py-4">
               <h2 className="font-display text-lg">
                 {cat.icon ? <span className="mr-2">{cat.icon}</span> : null}

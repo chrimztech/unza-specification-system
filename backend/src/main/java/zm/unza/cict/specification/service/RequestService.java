@@ -23,6 +23,7 @@ public class RequestService {
     private static final UUID NIL_UUID = UUID.fromString("00000000-0000-0000-0000-000000000000");
     private static final Set<RequestStatus> WITHDRAWABLE = EnumSet.of(
             RequestStatus.DRAFT, RequestStatus.PENDING_MANAGER, RequestStatus.PENDING_CICT, RequestStatus.NEEDS_CLARIFICATION);
+    private static final Set<String> SOFTWARE_CATEGORIES = Set.of("Design", "Teaching", "Development", "Other");
 
     private final RequestRepository requestRepository;
     private final RequestItemRepository requestItemRepository;
@@ -35,6 +36,7 @@ public class RequestService {
     private final RequestAccessService accessService;
     private final RequestEventService eventService;
     private final NotificationService notificationService;
+    private final ReferenceNumberService referenceNumberService;
 
     @Transactional(readOnly = true)
     public List<RequestResponse> listVisible(AuthenticatedUser user) {
@@ -57,35 +59,29 @@ public class RequestService {
         User requester = userRepository.findById(actor.id())
                 .orElseThrow(() -> new NotFoundException("User not found."));
 
-        String reference = req.reference() != null ? req.reference().trim() : "";
-        if (reference.isEmpty()) {
-            throw new BadRequestException(
-                    "Enter the CICT Help Desk ticket number for this request. Raise a ticket with the Help Desk first if you don't have one yet.");
-        }
-        if (requestRepository.existsByReference(reference)) {
-            throw new BadRequestException("This Help Desk reference has already been used for another request.");
-        }
-
         Request request = Request.builder()
-                .reference(reference)
+                .reference(referenceNumberService.nextRequestNumber())
                 .requester(requester)
                 .submittedBy(requester)
                 .build();
         applyFields(request, req);
+        request = requestRepository.save(request);
+        replaceItems(request, req.items(), effectivePositionLevel(request));
 
         if (submit) {
-            validateForSubmission(request, req);
+            validateForSubmission(request);
             request.setStatus(RequestStatus.PENDING_MANAGER);
             request.setSubmittedAt(Instant.now());
         } else {
             request.setStatus(RequestStatus.DRAFT);
         }
-        request = requestRepository.save(request);
-        replaceItems(request, req.items(), effectivePositionLevel(request));
 
         eventService.log(request, actor.id(), actor.email(),
                 submit ? "Request submitted for manager approval" : "Draft saved",
                 null, request.getStatus(), null);
+        if (submit) {
+            notificationService.notifyStatusChange(request, RequestStatus.DRAFT, actor.id());
+        }
 
         return toResponse(loadWithItems(request.getId()));
     }
@@ -98,29 +94,21 @@ public class RequestService {
             throw new BadRequestException("Only draft requests can be edited.");
         }
 
-        if (req.reference() != null) {
-            String reference = req.reference().trim();
-            if (reference.isEmpty()) {
-                throw new BadRequestException("Enter the CICT Help Desk ticket number for this request.");
-            }
-            if (!reference.equalsIgnoreCase(request.getReference()) && requestRepository.existsByReference(reference)) {
-                throw new BadRequestException("This Help Desk reference has already been used for another request.");
-            }
-            request.setReference(reference);
-        }
-
         applyFields(request, req);
+        replaceItems(request, req.items(), effectivePositionLevel(request));
 
         if (submit) {
-            validateForSubmission(request, req);
+            validateForSubmission(request);
             request.setStatus(RequestStatus.PENDING_MANAGER);
             request.setSubmittedAt(Instant.now());
         }
-        replaceItems(request, req.items(), effectivePositionLevel(request));
 
         eventService.log(request, actor.id(), actor.email(),
                 submit ? "Request submitted for manager approval" : "Draft updated",
                 RequestStatus.DRAFT, request.getStatus(), null);
+        if (submit) {
+            notificationService.notifyStatusChange(request, RequestStatus.DRAFT, actor.id());
+        }
 
         return toResponse(loadWithItems(request.getId()));
     }
@@ -144,9 +132,7 @@ public class RequestService {
         if (request.getStatus() != RequestStatus.DRAFT) {
             throw new BadRequestException("Only draft requests can be submitted.");
         }
-        if (request.getManager() == null) {
-            throw new BadRequestException("Choose an approving manager before submitting.");
-        }
+        validateForSubmission(request);
         RequestStatus from = request.getStatus();
         request.setStatus(RequestStatus.PENDING_MANAGER);
         request.setSubmittedAt(Instant.now());
@@ -251,6 +237,7 @@ public class RequestService {
         switch (req.decision()) {
             case "approved" -> {
                 applyItemDecisions(request, req.itemDecisions());
+                validateTechnicalApproval(request);
                 request.setStatus(RequestStatus.APPROVED);
                 request.setCictDecidedAt(Instant.now());
                 request.setCictDecidedBy(userRepository.getReferenceById(actor.id()));
@@ -291,6 +278,13 @@ public class RequestService {
                     : (item.getRecommendedProfile() != null ? item.getRecommendedProfile().getId() : null);
             if (profileId != null) {
                 SpecProfile profile = specProfileRepository.findById(profileId).orElse(null);
+                if (profile != null && (item.getCategory() == null
+                        || !profile.getCategory().getId().equals(item.getCategory().getId()))) {
+                    throw new BadRequestException("The approved specification does not match its equipment category.");
+                }
+                if (profile != null && !profile.isActive()) {
+                    throw new BadRequestException("The selected approved specification is no longer active.");
+                }
                 item.setApprovedProfile(profile);
                 if (chosen != null && chosen.approvedSpecSnapshot() != null) {
                     item.setApprovedSpecSnapshot(chosen.approvedSpecSnapshot());
@@ -312,18 +306,67 @@ public class RequestService {
         }
     }
 
-    private void validateForSubmission(Request request, RequestUpsertRequest req) {
+    private void validateForSubmission(Request request) {
         if (request.getTitle() == null || request.getTitle().trim().length() < 3) {
             throw new BadRequestException("Add a descriptive request title.");
+        }
+        if (request.getOrgUnit() == null) {
+            throw new BadRequestException("Select the requesting Unit or School.");
+        }
+        if (request.getDepartment() == null || request.getDepartment().isBlank()) {
+            throw new BadRequestException("Enter the requesting department.");
+        }
+        if (request.getDesignation() == null || request.getDesignation().isBlank()) {
+            throw new BadRequestException("Enter the designation of the intended user.");
+        }
+        if (request.getRequestType() == null || request.getRequestType().isBlank()) {
+            throw new BadRequestException("Select the request type.");
+        }
+        if (request.getBusinessContext() == null || request.getBusinessContext().isBlank()) {
+            throw new BadRequestException("Select the business context.");
         }
         if (request.getJustification() == null || request.getJustification().trim().length() < 10) {
             throw new BadRequestException("Give a business justification.");
         }
-        if (req.items() == null || req.items().isEmpty()) {
+        if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new BadRequestException("Add at least one equipment item.");
+        }
+        for (int index = 0; index < request.getItems().size(); index++) {
+            RequestItem item = request.getItems().get(index);
+            String label = "Item " + (index + 1);
+            if (item.getCategory() == null) {
+                throw new BadRequestException(label + " needs an equipment category.");
+            }
+            if (item.getQuantity() < 1) {
+                throw new BadRequestException(label + " quantity must be one or more.");
+            }
+            if (item.getPurpose() == null || item.getPurpose().isBlank()) {
+                throw new BadRequestException("Describe what " + label.toLowerCase() + " will be used for.");
+            }
+            if ("PRINTER".equalsIgnoreCase(item.getCategory().getCode())
+                    && (item.getNumberOfUsers() == null || item.getNumberOfUsers() < 1)) {
+                throw new BadRequestException("Specify the number of users for " + label.toLowerCase() + ".");
+            }
+            if ("Software".equalsIgnoreCase(item.getCategory().getAssetClass())
+                    && !SOFTWARE_CATEGORIES.contains(item.getSoftwareCategory())) {
+                throw new BadRequestException("Select a valid software category for " + label.toLowerCase() + ".");
+            }
         }
         if (request.getManager() == null) {
             throw new BadRequestException("Choose the approving manager.");
+        }
+        if (!request.isDeclarationAccepted()) {
+            throw new BadRequestException("Accept the requester declaration before submitting.");
+        }
+    }
+
+    private void validateTechnicalApproval(Request request) {
+        for (int index = 0; index < request.getItems().size(); index++) {
+            RequestItem item = request.getItems().get(index);
+            if (item.getApprovedProfile() == null && item.getApprovedSpecSnapshot() == null) {
+                throw new BadRequestException(
+                        "Choose an approved technical specification for item " + (index + 1) + " before approval.");
+            }
         }
     }
 
@@ -343,6 +386,8 @@ public class RequestService {
                     .orElseThrow(() -> new NotFoundException("Org unit not found.")));
         }
         if (req.orgUnitName() != null) request.setOrgUnitName(req.orgUnitName());
+        if (req.department() != null) request.setDepartment(req.department());
+        if (req.designation() != null) request.setDesignation(req.designation());
         if (req.managerId() != null) {
             request.setManager(userRepository.findById(req.managerId())
                     .orElseThrow(() -> new NotFoundException("Manager not found.")));
@@ -385,15 +430,21 @@ public class RequestService {
             item.setCategory(category);
             item.setQuantity(itemReq.quantity() != null ? itemReq.quantity() : 1);
             item.setIntendedUsers(itemReq.intendedUsers());
+            item.setNumberOfUsers(itemReq.numberOfUsers());
             item.setLocation(itemReq.location());
+            item.setDesignation(itemReq.designation());
             item.setShared(Boolean.TRUE.equals(itemReq.isShared()));
             item.setPurpose(itemReq.purpose());
             item.setRequiredSoftware(itemReq.requiredSoftware());
+            item.setSoftwareCategory(itemReq.softwareCategory());
             item.setProposedSpec(itemReq.proposedSpec());
             item.setSortOrder(itemReq.sortOrder() != null ? itemReq.sortOrder() : order);
 
+            String itemLevel = itemReq.designation() != null && !itemReq.designation().isBlank()
+                    ? itemReq.designation()
+                    : positionLevel;
             SpecProfile recommended = category != null
-                    ? specProfileService.recommend(category.getId(), positionLevel)
+                    ? specProfileService.recommend(category.getId(), itemLevel, itemReq.numberOfUsers())
                     : null;
             item.setRecommendedProfile(recommended);
 
@@ -403,8 +454,16 @@ public class RequestService {
         request.getItems().removeIf(i -> i.getId() != null && !keepIds.contains(i.getId()));
     }
 
-    /** Spec recommendations follow the actual end-user's position level when the request is on someone else's behalf. */
+    /**
+     * Spec recommendations follow, in order: the request's own "designation of intended user"
+     * (the requester's typed-in role, e.g. "Director"), then the actual end-user's HR position
+     * level when the request is on someone else's behalf, then the requester's own HR level.
+     * Individual items can further override this via their own designation in replaceItems().
+     */
     private String effectivePositionLevel(Request request) {
+        if (request.getDesignation() != null && !request.getDesignation().isBlank()) {
+            return request.getDesignation();
+        }
         return request.getOnBehalfOf() != null
                 ? request.getOnBehalfOf().getPositionLevel()
                 : request.getRequester().getPositionLevel();
@@ -427,7 +486,7 @@ public class RequestService {
                         r.getOrgUnit().getUnitType(),
                         r.getOrgUnit().getParent() != null ? r.getOrgUnit().getParent().getId() : null,
                         r.getOrgUnit().getCampus(), r.getOrgUnit().isActive(), r.getOrgUnit().getCreatedAt()) : null,
-                r.getOrgUnitName(), toUserRef(r.getManager()), r.getTitle(), r.getJustification(),
+                r.getOrgUnitName(), r.getDepartment(), r.getDesignation(), toUserRef(r.getManager()), r.getTitle(), r.getJustification(),
                 r.getRequestType(), r.getBusinessContext(), r.getImpactIfNotProvided(), r.getPriority(),
                 r.getPriorityReason(), r.getRequiredBy(), r.getFundingSource(), r.getCostCentre(),
                 r.getBudgetStatus(), r.getEstimatedBudget(), r.getExistingAssetTag(), r.getExistingAssetDetails(),
@@ -444,8 +503,8 @@ public class RequestService {
                 item.getCategory() != null ? item.getCategory().getId() : null,
                 item.getCategory() != null ? item.getCategory().getCode() : null,
                 item.getCategory() != null ? item.getCategory().getName() : null,
-                item.getQuantity(), item.getIntendedUsers(), item.getLocation(), item.isShared(),
-                item.getPurpose(), item.getRequiredSoftware(), item.getProposedSpec(),
+                item.getQuantity(), item.getIntendedUsers(), item.getNumberOfUsers(), item.getLocation(), item.getDesignation(), item.isShared(),
+                item.getPurpose(), item.getRequiredSoftware(), item.getSoftwareCategory(), item.getProposedSpec(),
                 specProfileService.toResponse(item.getRecommendedProfile()),
                 specProfileService.toResponse(item.getApprovedProfile()),
                 item.getApprovedSpecSnapshot(), item.getExceptionJustification(), item.getReviewerNote(),

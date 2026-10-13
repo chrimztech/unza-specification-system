@@ -43,6 +43,14 @@ public class AuditLogService {
                 .build());
     }
 
+    /** Wipes the audit log. Writes one fresh entry recording the clear itself, so there's a trace of who did it and when. */
+    @Transactional
+    public void clear() {
+        long count = auditLogRepository.count();
+        auditLogRepository.deleteAllInBatch();
+        log("AuditLog", "all", "clear", "Cleared " + count + " audit log entries");
+    }
+
     @Transactional(readOnly = true)
     public List<AuditLogResponse> recent(int limit) {
         return auditLogRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(0, limit)).stream()

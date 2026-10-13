@@ -11,7 +11,10 @@ export const Route = createFileRoute("/$")({
       },
       { name: "robots", content: "noindex" },
       { property: "og:title", content: "Page not found · UNZA CICT" },
-      { property: "og:description", content: "This page is not part of the CICT specification system." },
+      {
+        property: "og:description",
+        content: "This page is not part of the CICT specification system.",
+      },
     ],
   }),
   component: NotFoundPage,

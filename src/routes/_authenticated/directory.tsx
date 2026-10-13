@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api-client";
+import { useAuth } from "@/hooks/useAuth";
 import type { OrgUnitResponse, UserResponse, UserRoleResponse } from "@/lib/api-types";
 import { Input } from "@/components/ui/input";
 import { QueryError } from "@/components/QueryError";
@@ -18,7 +19,8 @@ export const Route = createFileRoute("/_authenticated/directory")({
       { property: "og:title", content: "Staff directory & units · UNZA CICT" },
       {
         property: "og:description",
-        content: "Registered staff, units and assigned roles in the UNZA CICT specification system.",
+        content:
+          "Registered staff, units and assigned roles in the UNZA CICT specification system.",
       },
     ],
   }),
@@ -26,6 +28,7 @@ export const Route = createFileRoute("/_authenticated/directory")({
 });
 
 function Directory() {
+  const { isOversight } = useAuth();
   const [search, setSearch] = useState("");
 
   const staff = useQuery({
@@ -63,14 +66,25 @@ function Directory() {
     })
     .sort((a, b) => a.fullName.localeCompare(b.fullName));
 
+  if (!isOversight) {
+    return (
+      <div className="rounded-md border border-border bg-card p-8 text-center">
+        <h1 className="font-display text-2xl">Restricted</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The staff directory is available to CICT, procurement and audit roles only.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div>
         <p className="label-caps">Oversight</p>
         <h1 className="mt-1 font-display text-3xl">Staff directory & units</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Registered staff accounts, their organisational unit and the roles assigned to them.
-          Role assignment is managed by CICT administrators in the backend.
+          Registered staff accounts, their organisational unit and the roles assigned to them. Role
+          assignment is managed by CICT administrators in the backend.
         </p>
       </div>
 
@@ -92,7 +106,7 @@ function Directory() {
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      <div className="overflow-hidden rounded-md border border-border bg-card shadow-panel">
+      <div className="overflow-hidden surface">
         <table className="w-full text-sm">
           <thead className="bg-secondary/60">
             <tr className="text-left">
@@ -146,17 +160,23 @@ function Directory() {
 
       <section className="space-y-3">
         <h2 className="font-display text-xl">Organisational units</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {activeUnits.map((u) => (
-            <div key={u.id} className="rounded-md border border-border bg-card p-4 shadow-panel">
-              <div className="text-sm font-medium">{u.name}</div>
-              <div className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
-                {u.unitType}
-                {u.campus ? ` · ${u.campus}` : ""}
+        {activeUnits.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-border bg-card/50 p-8 text-center text-sm text-muted-foreground">
+            No organisational units have been added yet.
+          </p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {activeUnits.map((u) => (
+              <div key={u.id} className="surface p-4">
+                <div className="text-sm font-medium">{u.name}</div>
+                <div className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
+                  {u.unitType}
+                  {u.campus ? ` · ${u.campus}` : ""}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

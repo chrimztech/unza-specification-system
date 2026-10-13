@@ -3,12 +3,14 @@ package zm.unza.cict.specification.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import zm.unza.cict.specification.common.exception.BadRequestException;
 import zm.unza.cict.specification.common.exception.NotFoundException;
 import zm.unza.cict.specification.domain.EquipmentCategory;
 import zm.unza.cict.specification.domain.SpecProfile;
 import zm.unza.cict.specification.dto.catalogue.SpecProfileRequest;
 import zm.unza.cict.specification.dto.catalogue.SpecProfileResponse;
 import zm.unza.cict.specification.repository.EquipmentCategoryRepository;
+import zm.unza.cict.specification.repository.RequestItemRepository;
 import zm.unza.cict.specification.repository.SpecProfileRepository;
 
 import java.util.List;
@@ -23,6 +25,7 @@ public class SpecProfileService {
 
     private final SpecProfileRepository specProfileRepository;
     private final EquipmentCategoryRepository categoryRepository;
+    private final RequestItemRepository requestItemRepository;
     private final AuditLogService auditLogService;
 
     @Transactional(readOnly = true)
@@ -72,22 +75,63 @@ public class SpecProfileService {
     public void delete(UUID id) {
         SpecProfile profile = specProfileRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Spec profile not found."));
+        // The FKs would silently null the recommended/approved profile on existing requests.
+        if (requestItemRepository.existsByRecommendedProfileIdOrApprovedProfileId(id, id)) {
+            throw new BadRequestException("This profile is referenced by existing requests. Retire it instead of deleting it.");
+        }
         auditLogService.log("SpecProfile", id.toString(), "delete", "Deleted profile " + profile.getName());
         specProfileRepository.deleteById(id);
     }
 
-    /** Mirrors the frontend's recommendProfile() heuristic in lib/requests.ts. */
+    /**
+     * Mirrors the frontend's recommendTier() heuristic in lib/domain.ts. Matching is
+     * case-/whitespace-insensitive since the position level comes verbatim from the HR
+     * system's free-text job title field and won't reliably match the curated tag casing
+     * CICT uses on spec profiles otherwise.
+     */
     @Transactional(readOnly = true)
     public SpecProfile recommend(UUID categoryId, String positionLevel) {
+        return recommend(categoryId, positionLevel, null);
+    }
+
+    /**
+     * As above, but a shared item's user count can push the recommendation up a tier even
+     * when the position-level match alone would land on Standard — e.g. a printer shared by
+     * a whole office needs higher-volume capacity than one person's desk printer, regardless
+     * of that person's HR grade.
+     */
+    @Transactional(readOnly = true)
+    public SpecProfile recommend(UUID categoryId, String positionLevel, Integer numberOfUsers) {
         if (categoryId == null) return null;
-        List<SpecProfile> forCategory = specProfileRepository.findByCategoryId(categoryId);
+        List<SpecProfile> forCategory = specProfileRepository.findByCategoryId(categoryId).stream()
+                .filter(SpecProfile::isActive)
+                .toList();
         if (forCategory.isEmpty()) return null;
-        if (positionLevel != null) {
-            var matched = forCategory.stream()
-                    .filter(p -> p.getSuitsPositionLevels().contains(positionLevel))
-                    .findFirst();
-            if (matched.isPresent()) return matched.get();
+
+        SpecProfile matched = null;
+        if (positionLevel != null && !positionLevel.isBlank()) {
+            String trimmed = positionLevel.trim();
+            matched = forCategory.stream()
+                    .filter(p -> p.getSuitsPositionLevels().stream()
+                            .anyMatch(level -> level.trim().equalsIgnoreCase(trimmed)))
+                    .findFirst().orElse(null);
         }
+        SpecProfile base = matched != null ? matched : lowestTier(forCategory);
+
+        if (numberOfUsers != null && numberOfUsers > 1) {
+            int requiredTierIndex = numberOfUsers > 15 ? 2 : numberOfUsers > 5 ? 1 : 0;
+            if (TIER_ORDER.indexOf(base.getTier()) < requiredTierIndex) {
+                SpecProfile escalated = forCategory.stream()
+                        .filter(p -> TIER_ORDER.indexOf(p.getTier()) >= requiredTierIndex)
+                        .min((a, b) -> Integer.compare(TIER_ORDER.indexOf(a.getTier()), TIER_ORDER.indexOf(b.getTier())))
+                        .orElse(null);
+                if (escalated != null) return escalated;
+            }
+        }
+        return base;
+    }
+
+    private SpecProfile lowestTier(List<SpecProfile> forCategory) {
         return forCategory.stream()
                 .min((a, b) -> Integer.compare(TIER_ORDER.indexOf(a.getTier()), TIER_ORDER.indexOf(b.getTier())))
                 .orElse(forCategory.get(0));

@@ -1,6 +1,7 @@
 package zm.unza.cict.specification.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -26,5 +27,13 @@ public class AuditLogController {
             throw new ForbiddenException("Administrators and auditors only.");
         }
         return auditLogService.recent(Math.min(limit, 500));
+    }
+
+    @DeleteMapping
+    public void clear() {
+        if (!CurrentUser.get().isAdmin()) {
+            throw new ForbiddenException("Administrators only.");
+        }
+        auditLogService.clear();
     }
 }

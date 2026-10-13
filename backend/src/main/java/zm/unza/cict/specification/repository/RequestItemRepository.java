@@ -8,4 +8,8 @@ import java.util.UUID;
 
 public interface RequestItemRepository extends JpaRepository<RequestItem, UUID> {
     List<RequestItem> findByRequestIdOrderBySortOrderAsc(UUID requestId);
+
+    boolean existsByCategoryId(UUID categoryId);
+
+    boolean existsByRecommendedProfileIdOrApprovedProfileId(UUID recommendedProfileId, UUID approvedProfileId);
 }

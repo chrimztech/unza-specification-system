@@ -28,8 +28,7 @@ export const Route = createFileRoute("/_authenticated/audit")({
       { property: "og:title", content: "Audit workspace · UNZA CICT" },
       {
         property: "og:description",
-        content:
-          "Read-only audit view of request records, decisions and configuration history.",
+        content: "Read-only audit view of request records, decisions and configuration history.",
       },
     ],
   }),
@@ -123,8 +122,9 @@ function AuditPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-semibold">Audit workspace</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="label-caps">Oversight</p>
+        <h1 className="mt-1 font-display text-3xl">Audit workspace</h1>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Read-only oversight view of request records, decision history and approval evidence.
         </p>
       </div>
@@ -195,7 +195,7 @@ function AuditPage() {
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-md border border-border bg-card shadow-panel">
+      <div className="overflow-hidden surface">
         <table className="w-full text-sm">
           <thead className="bg-secondary/60">
             <tr className="text-left">
@@ -210,10 +210,7 @@ function AuditPage() {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td
-                  colSpan={6}
-                  className="px-4 py-8 text-center text-sm text-muted-foreground"
-                >
+                <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
                   No requests match the current filters.
                 </td>
               </tr>
@@ -241,9 +238,7 @@ function AuditPage() {
                   <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
                     {unitName(r) || "—"}
                   </td>
-                  <td className="hidden px-4 py-3 sm:table-cell">
-                    {formatDate(r.submittedAt)}
-                  </td>
+                  <td className="hidden px-4 py-3 sm:table-cell">{formatDate(r.submittedAt)}</td>
                   <td className="px-4 py-3">
                     <StatusBadge status={r.status} />
                   </td>
@@ -271,7 +266,7 @@ function AuditPage() {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-border bg-card p-5 shadow-panel">
+    <div className="surface p-5">
       <p className="label-caps">{label}</p>
       <p className="mt-1 font-display text-3xl">{value}</p>
     </div>

@@ -36,6 +36,7 @@ public class ProcurementService {
     private final RequestPurchaseRepository purchaseRepository;
     private final RequestStoresReceiptRepository storesReceiptRepository;
     private final RequestVerificationRepository verificationRepository;
+    private final RequestAttachmentRepository attachmentRepository;
     private final UserRepository userRepository;
     private final RequestAccessService accessService;
     private final ReferenceNumberService referenceNumberService;
@@ -52,12 +53,22 @@ public class ProcurementService {
         }
         RequestStatus from = request.getStatus();
 
+        RequestAttachment attachment = null;
+        if (req.attachmentId() != null) {
+            attachment = attachmentRepository.findById(req.attachmentId())
+                    .orElseThrow(() -> new NotFoundException("Attachment not found."));
+            if (!attachment.getRequest().getId().equals(requestId)) {
+                throw new BadRequestException("That attachment does not belong to this request.");
+            }
+        }
+
         RequestQuotation quotation = RequestQuotation.builder()
                 .request(request)
                 .vendorName(req.vendorName())
                 .amount(req.amount())
                 .currency(req.currency() != null && !req.currency().isBlank() ? req.currency() : "ZMW")
                 .notes(req.notes())
+                .attachment(attachment)
                 .submittedBy(userRepository.getReferenceById(actor.id()))
                 .build();
         quotation = quotationRepository.save(quotation);
@@ -283,6 +294,8 @@ public class ProcurementService {
                 .toList();
         return new QuotationResponse(
                 q.getId(), q.getRequest().getId(), q.getVendorName(), q.getAmount(), q.getCurrency(), q.getNotes(),
+                q.getAttachment() != null ? q.getAttachment().getId() : null,
+                q.getAttachment() != null ? q.getAttachment().getFileName() : null,
                 toUserRef(q.getSubmittedBy()), q.getCreatedAt(), evaluations
         );
     }

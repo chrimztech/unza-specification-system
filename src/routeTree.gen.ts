@@ -32,7 +32,11 @@ import { Route as AuthenticatedRequestsIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedRequestsIdRouteImport } from './routes/_authenticated/requests/$id'
 import { Route as AuthenticatedRequestsNewRouteImport } from './routes/_authenticated/requests/new'
 import { Route as AuthenticatedRequestsIdEditRouteImport } from './routes/_authenticated/requests/$id.edit'
+import { Route as AuthenticatedRequestsIdPrintRouteImport } from './routes/_authenticated/requests/$id.print'
+import { Route as AuthenticatedRequestsIdPurchaseOrderRouteImport } from './routes/_authenticated/requests/$id.purchase-order'
 import { Route as AuthenticatedRequestsIdSpecSheetRouteImport } from './routes/_authenticated/requests/$id.spec-sheet'
+import { Route as AuthenticatedRequestsIdStoresReceiptRouteImport } from './routes/_authenticated/requests/$id.stores-receipt'
+import { Route as AuthenticatedRequestsIdVerificationCertificateRouteImport } from './routes/_authenticated/requests/$id.verification-certificate'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -154,10 +158,34 @@ const AuthenticatedRequestsIdEditRoute =
     path: '/edit',
     getParentRoute: () => AuthenticatedRequestsIdRoute,
   } as any)
+const AuthenticatedRequestsIdPrintRoute =
+  AuthenticatedRequestsIdPrintRouteImport.update({
+    id: '/print',
+    path: '/print',
+    getParentRoute: () => AuthenticatedRequestsIdRoute,
+  } as any)
+const AuthenticatedRequestsIdPurchaseOrderRoute =
+  AuthenticatedRequestsIdPurchaseOrderRouteImport.update({
+    id: '/purchase-order',
+    path: '/purchase-order',
+    getParentRoute: () => AuthenticatedRequestsIdRoute,
+  } as any)
 const AuthenticatedRequestsIdSpecSheetRoute =
   AuthenticatedRequestsIdSpecSheetRouteImport.update({
     id: '/spec-sheet',
     path: '/spec-sheet',
+    getParentRoute: () => AuthenticatedRequestsIdRoute,
+  } as any)
+const AuthenticatedRequestsIdStoresReceiptRoute =
+  AuthenticatedRequestsIdStoresReceiptRouteImport.update({
+    id: '/stores-receipt',
+    path: '/stores-receipt',
+    getParentRoute: () => AuthenticatedRequestsIdRoute,
+  } as any)
+const AuthenticatedRequestsIdVerificationCertificateRoute =
+  AuthenticatedRequestsIdVerificationCertificateRouteImport.update({
+    id: '/verification-certificate',
+    path: '/verification-certificate',
     getParentRoute: () => AuthenticatedRequestsIdRoute,
   } as any)
 
@@ -184,7 +212,11 @@ export interface FileRoutesByFullPath {
   '/requests/new': typeof AuthenticatedRequestsNewRoute
   '/requests/': typeof AuthenticatedRequestsIndexRoute
   '/requests/$id/edit': typeof AuthenticatedRequestsIdEditRoute
+  '/requests/$id/print': typeof AuthenticatedRequestsIdPrintRoute
+  '/requests/$id/purchase-order': typeof AuthenticatedRequestsIdPurchaseOrderRoute
   '/requests/$id/spec-sheet': typeof AuthenticatedRequestsIdSpecSheetRoute
+  '/requests/$id/stores-receipt': typeof AuthenticatedRequestsIdStoresReceiptRoute
+  '/requests/$id/verification-certificate': typeof AuthenticatedRequestsIdVerificationCertificateRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -209,7 +241,11 @@ export interface FileRoutesByTo {
   '/requests/new': typeof AuthenticatedRequestsNewRoute
   '/requests': typeof AuthenticatedRequestsIndexRoute
   '/requests/$id/edit': typeof AuthenticatedRequestsIdEditRoute
+  '/requests/$id/print': typeof AuthenticatedRequestsIdPrintRoute
+  '/requests/$id/purchase-order': typeof AuthenticatedRequestsIdPurchaseOrderRoute
   '/requests/$id/spec-sheet': typeof AuthenticatedRequestsIdSpecSheetRoute
+  '/requests/$id/stores-receipt': typeof AuthenticatedRequestsIdStoresReceiptRoute
+  '/requests/$id/verification-certificate': typeof AuthenticatedRequestsIdVerificationCertificateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -236,7 +272,11 @@ export interface FileRoutesById {
   '/_authenticated/requests/new': typeof AuthenticatedRequestsNewRoute
   '/_authenticated/requests/': typeof AuthenticatedRequestsIndexRoute
   '/_authenticated/requests/$id/edit': typeof AuthenticatedRequestsIdEditRoute
+  '/_authenticated/requests/$id/print': typeof AuthenticatedRequestsIdPrintRoute
+  '/_authenticated/requests/$id/purchase-order': typeof AuthenticatedRequestsIdPurchaseOrderRoute
   '/_authenticated/requests/$id/spec-sheet': typeof AuthenticatedRequestsIdSpecSheetRoute
+  '/_authenticated/requests/$id/stores-receipt': typeof AuthenticatedRequestsIdStoresReceiptRoute
+  '/_authenticated/requests/$id/verification-certificate': typeof AuthenticatedRequestsIdVerificationCertificateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -263,7 +303,11 @@ export interface FileRouteTypes {
     | '/requests/new'
     | '/requests/'
     | '/requests/$id/edit'
+    | '/requests/$id/print'
+    | '/requests/$id/purchase-order'
     | '/requests/$id/spec-sheet'
+    | '/requests/$id/stores-receipt'
+    | '/requests/$id/verification-certificate'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -288,7 +332,11 @@ export interface FileRouteTypes {
     | '/requests/new'
     | '/requests'
     | '/requests/$id/edit'
+    | '/requests/$id/print'
+    | '/requests/$id/purchase-order'
     | '/requests/$id/spec-sheet'
+    | '/requests/$id/stores-receipt'
+    | '/requests/$id/verification-certificate'
   id:
     | '__root__'
     | '/'
@@ -314,7 +362,11 @@ export interface FileRouteTypes {
     | '/_authenticated/requests/new'
     | '/_authenticated/requests/'
     | '/_authenticated/requests/$id/edit'
+    | '/_authenticated/requests/$id/print'
+    | '/_authenticated/requests/$id/purchase-order'
     | '/_authenticated/requests/$id/spec-sheet'
+    | '/_authenticated/requests/$id/stores-receipt'
+    | '/_authenticated/requests/$id/verification-certificate'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -488,6 +540,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRequestsIdEditRouteImport
       parentRoute: typeof AuthenticatedRequestsIdRoute
     }
+    '/_authenticated/requests/$id/print': {
+      id: '/_authenticated/requests/$id/print'
+      path: '/print'
+      fullPath: '/requests/$id/print'
+      preLoaderRoute: typeof AuthenticatedRequestsIdPrintRouteImport
+      parentRoute: typeof AuthenticatedRequestsIdRoute
+    }
+    '/_authenticated/requests/$id/purchase-order': {
+      id: '/_authenticated/requests/$id/purchase-order'
+      path: '/purchase-order'
+      fullPath: '/requests/$id/purchase-order'
+      preLoaderRoute: typeof AuthenticatedRequestsIdPurchaseOrderRouteImport
+      parentRoute: typeof AuthenticatedRequestsIdRoute
+    }
     '/_authenticated/requests/$id/spec-sheet': {
       id: '/_authenticated/requests/$id/spec-sheet'
       path: '/spec-sheet'
@@ -495,19 +561,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRequestsIdSpecSheetRouteImport
       parentRoute: typeof AuthenticatedRequestsIdRoute
     }
+    '/_authenticated/requests/$id/stores-receipt': {
+      id: '/_authenticated/requests/$id/stores-receipt'
+      path: '/stores-receipt'
+      fullPath: '/requests/$id/stores-receipt'
+      preLoaderRoute: typeof AuthenticatedRequestsIdStoresReceiptRouteImport
+      parentRoute: typeof AuthenticatedRequestsIdRoute
+    }
+    '/_authenticated/requests/$id/verification-certificate': {
+      id: '/_authenticated/requests/$id/verification-certificate'
+      path: '/verification-certificate'
+      fullPath: '/requests/$id/verification-certificate'
+      preLoaderRoute: typeof AuthenticatedRequestsIdVerificationCertificateRouteImport
+      parentRoute: typeof AuthenticatedRequestsIdRoute
+    }
   }
 }
 
 interface AuthenticatedRequestsIdRouteChildren {
   AuthenticatedRequestsIdEditRoute: typeof AuthenticatedRequestsIdEditRoute
+  AuthenticatedRequestsIdPrintRoute: typeof AuthenticatedRequestsIdPrintRoute
+  AuthenticatedRequestsIdPurchaseOrderRoute: typeof AuthenticatedRequestsIdPurchaseOrderRoute
   AuthenticatedRequestsIdSpecSheetRoute: typeof AuthenticatedRequestsIdSpecSheetRoute
+  AuthenticatedRequestsIdStoresReceiptRoute: typeof AuthenticatedRequestsIdStoresReceiptRoute
+  AuthenticatedRequestsIdVerificationCertificateRoute: typeof AuthenticatedRequestsIdVerificationCertificateRoute
 }
 
 const AuthenticatedRequestsIdRouteChildren: AuthenticatedRequestsIdRouteChildren =
   {
     AuthenticatedRequestsIdEditRoute: AuthenticatedRequestsIdEditRoute,
+    AuthenticatedRequestsIdPrintRoute: AuthenticatedRequestsIdPrintRoute,
+    AuthenticatedRequestsIdPurchaseOrderRoute:
+      AuthenticatedRequestsIdPurchaseOrderRoute,
     AuthenticatedRequestsIdSpecSheetRoute:
       AuthenticatedRequestsIdSpecSheetRoute,
+    AuthenticatedRequestsIdStoresReceiptRoute:
+      AuthenticatedRequestsIdStoresReceiptRoute,
+    AuthenticatedRequestsIdVerificationCertificateRoute:
+      AuthenticatedRequestsIdVerificationCertificateRoute,
   }
 
 const AuthenticatedRequestsIdRouteWithChildren =

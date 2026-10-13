@@ -19,7 +19,8 @@ export const Route = createFileRoute("/_authenticated/verification")({
       { property: "og:title", content: "Verification · UNZA CICT" },
       {
         property: "og:description",
-        content: "Confirm delivered equipment matches the approved specification, or flag for return.",
+        content:
+          "Confirm delivered equipment matches the approved specification, or flag for return.",
       },
     ],
   }),
@@ -46,8 +47,9 @@ function VerificationPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-semibold">Verification</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="label-caps">Workflow</p>
+        <h1 className="mt-1 font-display text-3xl">Verification</h1>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Equipment received into stores, awaiting CICT Support verification against the approved
           specification.
         </p>
@@ -61,7 +63,7 @@ function VerificationPage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-md border border-border bg-card p-5 shadow-panel">
+        <div className="surface p-5">
           <p className="label-caps">Awaiting verification</p>
           <p className="mt-1 font-display text-3xl">{rows.length}</p>
         </div>
@@ -76,7 +78,7 @@ function VerificationPage() {
         />
       </div>
 
-      <div className="overflow-hidden rounded-md border border-border bg-card shadow-panel">
+      <div className="overflow-hidden surface">
         <table className="w-full text-sm">
           <thead className="bg-secondary/60">
             <tr className="text-left">

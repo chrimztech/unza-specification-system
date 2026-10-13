@@ -127,10 +127,13 @@ export type RequestItemResponse = {
   categoryName: string | null;
   quantity: number;
   intendedUsers: string | null;
+  numberOfUsers: number | null;
   location: string | null;
+  designation: string | null;
   isShared: boolean;
   purpose: string | null;
   requiredSoftware: string | null;
+  softwareCategory: string | null;
   proposedSpec: string | null;
   recommendedProfile: SpecProfileResponse | null;
   approvedProfile: SpecProfileResponse | null;
@@ -149,6 +152,8 @@ export type RequestResponse = {
   onBehalfOf: UserRefResponse | null;
   orgUnit: OrgUnitResponse | null;
   orgUnitName: string | null;
+  department: string | null;
+  designation: string | null;
   manager: UserRefResponse | null;
   title: string | null;
   justification: string | null;
@@ -253,6 +258,8 @@ export type QuotationResponse = {
   amount: number;
   currency: string;
   notes: string | null;
+  attachmentId: string | null;
+  attachmentFileName: string | null;
   submittedBy: UserRefResponse | null;
   createdAt: string;
   evaluations: EvaluationResponse[];

@@ -27,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/reports")({
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-md border border-border bg-card p-5 shadow-panel">
+    <div className="surface p-5">
       <p className="label-caps">{label}</p>
       <p className="mt-1 font-display text-3xl">{value}</p>
       {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
@@ -143,20 +143,22 @@ function ReportsPage() {
         <Stat
           label="Average turnaround"
           value={turnaround ? `${turnaround.days.toFixed(1)} d` : "—"}
-          hint={turnaround ? `Across ${turnaround.count} completed requests` : "No completed requests yet"}
+          hint={
+            turnaround
+              ? `Across ${turnaround.count} completed requests`
+              : "No completed requests yet"
+          }
         />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-md border border-border bg-card p-6 shadow-panel">
+        <section className="surface p-6">
           <h2 className="font-display text-xl">By status</h2>
           <div className="mt-4">
-            <Bars
-              data={byStatus.map(([s, n]) => [STATUS_LABEL[s as RequestStatus] ?? s, n])}
-            />
+            <Bars data={byStatus.map(([s, n]) => [STATUS_LABEL[s as RequestStatus] ?? s, n])} />
           </div>
         </section>
-        <section className="rounded-md border border-border bg-card p-6 shadow-panel">
+        <section className="surface p-6">
           <h2 className="font-display text-xl">By priority</h2>
           <div className="mt-4">
             <Bars data={byPriority.map(([p, n]) => [p.charAt(0).toUpperCase() + p.slice(1), n])} />
@@ -164,14 +166,14 @@ function ReportsPage() {
         </section>
       </div>
 
-      <section className="rounded-md border border-border bg-card p-6 shadow-panel">
+      <section className="surface p-6">
         <h2 className="font-display text-xl">Demand by organisational unit</h2>
         <div className="mt-4">
           <Bars data={byUnit} />
         </div>
       </section>
 
-      <section className="rounded-md border border-border bg-card p-6 shadow-panel">
+      <section className="surface p-6">
         <h2 className="font-display text-xl">Most recent requests</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-sm">

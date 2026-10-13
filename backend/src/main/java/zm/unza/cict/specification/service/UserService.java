@@ -86,6 +86,25 @@ public class UserService {
         return toResponse(user);
     }
 
+    /**
+     * Permanently removes a user account. This cascades away every request they raised or
+     * submitted (and, via the request, its items/events/attachments) — an explicit, informed
+     * choice made when this was built, since the alternative (deactivating instead) was
+     * rejected in favour of a true delete. Manager/CICT-decision/attachment-uploader references
+     * on records that survive are set to null rather than blocked, so unrelated history isn't
+     * held hostage by this one account.
+     */
+    @Transactional
+    public void delete(UUID id, UUID actingUserId) {
+        if (id.equals(actingUserId)) {
+            throw new ForbiddenException("You cannot delete your own account.");
+        }
+        User user = userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not found."));
+        String email = user.getEmail();
+        auditLogService.log("User", id.toString(), "delete", "Deleted user account " + email);
+        userRepository.delete(user);
+    }
+
     @Transactional
     public UserRoleResponse assignRole(AssignRoleRequest req) {
         User user = userRepository.findById(req.userId())

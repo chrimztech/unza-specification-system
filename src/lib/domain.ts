@@ -55,20 +55,29 @@ export const PRIORITIES = [
 export const POSITION_LEVELS = [
   "Support staff",
   "Officer",
+  "Senior Officer",
+  "Principal Officer",
   "Technician",
+  "Assistant Lecturer",
   "Lecturer",
   "Senior Lecturer",
+  "Principal Lecturer",
   "Researcher",
   "Specialist",
   "Manager",
+  "Assistant Director",
+  "Deputy Director",
+  "Associate Professor",
   "Professor",
   "Head of Department",
+  "Deputy Dean",
   "Dean",
+  "Registrar",
+  "Bursar",
   "Director",
   "Top management",
   "Executive management",
 ];
-
 
 export const BUDGET_STATUSES = [
   "Budgeted for current year",
@@ -88,23 +97,41 @@ export type RecommendableProfile = {
   suitsPositionLevels: string[];
 };
 
-/** Live client-side preview of the tier CICT is likely to recommend, before a request is saved. */
+const TIER_ORDER = ["Standard", "Enhanced", "Specialised"];
+
+/**
+ * Live client-side preview of the tier CICT is likely to recommend, before a request is saved.
+ * Mirrors SpecProfileService.recommend() on the backend, including the numberOfUsers escalation:
+ * a shared item's user count can push the recommendation up a tier — e.g. a printer shared by a
+ * whole office needs higher-volume capacity than one person's desk printer.
+ */
 export function recommendTier(
   profiles: RecommendableProfile[],
   categoryId: string | null,
   positionLevel: string | null | undefined,
+  numberOfUsers?: number | null,
 ) {
   if (!categoryId) return null;
   const forCategory = profiles.filter((p) => p.categoryId === categoryId);
   if (forCategory.length === 0) return null;
-  const matched = positionLevel
-    ? forCategory.find((p) => p.suitsPositionLevels?.includes(positionLevel))
+  const normalizedLevel = positionLevel?.trim().toLowerCase();
+  const matched = normalizedLevel
+    ? forCategory.find((p) =>
+        p.suitsPositionLevels?.some((level) => level.trim().toLowerCase() === normalizedLevel),
+      )
     : undefined;
-  const order = ["Standard", "Enhanced", "Specialised"];
   const fallback = [...forCategory].sort(
-    (a, b) => order.indexOf(a.tier) - order.indexOf(b.tier),
+    (a, b) => TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier),
   )[0];
-  return matched ?? fallback ?? null;
+  const base = matched ?? fallback ?? null;
+  if (!base || !numberOfUsers || numberOfUsers <= 1) return base;
+
+  const requiredTierIndex = numberOfUsers > 15 ? 2 : numberOfUsers > 5 ? 1 : 0;
+  if (TIER_ORDER.indexOf(base.tier) >= requiredTierIndex) return base;
+  const escalated = [...forCategory]
+    .filter((p) => TIER_ORDER.indexOf(p.tier) >= requiredTierIndex)
+    .sort((a, b) => TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier))[0];
+  return escalated ?? base;
 }
 
 export function statusTone(status: RequestStatus) {
