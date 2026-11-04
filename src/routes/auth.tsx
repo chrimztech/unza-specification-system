@@ -164,16 +164,13 @@ function AuthPage() {
 
             <form onSubmit={signIn} className="mt-8 space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="identifier" className="text-sm font-semibold">
-                  Staff number or institutional email
-                </Label>
                 <Input
                   id="identifier"
+                  aria-label="Username"
                   autoComplete="username"
                   required
                   value={identifier}
                   onChange={(event) => setIdentifier(event.target.value)}
-                  placeholder="e.g. 123456 or name@unza.zm"
                   className="h-12"
                 />
               </div>
@@ -231,16 +228,12 @@ function AuthPage() {
               </div>
             </div>
 
-            <p className="mt-6 text-center text-xs leading-5 text-muted-foreground">
-              Cannot sign in? Contact HR or the CICT service desk at{" "}
-              <a
-                href={`mailto:${setting("support_email")}`}
-                className="font-semibold text-primary hover:underline"
-              >
-                {setting("support_email")}
-              </a>
-              .
-            </p>
+            {/* Set by administrators under Admin → Settings; hidden while blank. */}
+            {setting("sign_in_help_text").trim() ? (
+              <p className="mt-6 whitespace-pre-line text-center text-xs leading-5 text-muted-foreground">
+                {setting("sign_in_help_text")}
+              </p>
+            ) : null}
           </div>
         </div>
       </section>

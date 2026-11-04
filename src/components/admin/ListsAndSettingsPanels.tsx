@@ -277,7 +277,7 @@ export function SettingsPanel() {
       </p>
       {rows.map((row) => {
         const current = values[row.key] ?? row.value;
-        const long = row.value.length > 80;
+        const long = row.value.length > 80 || row.key.endsWith("_text");
         return (
           <div key={row.key} className="space-y-2 border border-border p-5">
             <Label htmlFor={`set-${row.key}`} className="capitalize">
