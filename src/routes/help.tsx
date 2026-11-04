@@ -76,7 +76,7 @@ function HelpPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-primary text-primary-foreground">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
+        <div className="flex items-center justify-between px-4 sm:px-8 lg:px-12 xl:px-16 py-4">
           <Link to="/" className="flex items-center gap-3">
             <img
               src="/logo.png"
@@ -92,7 +92,7 @@ function HelpPage() {
         <div className="crest-rule" />
       </header>
 
-      <main className="mx-auto max-w-4xl space-y-12 px-4 py-12">
+      <main className="space-y-12 px-4 sm:px-8 lg:px-12 xl:px-16 py-12">
         <section>
           <p className="label-caps">Guidance</p>
           <h1 className="mt-2 font-display text-4xl leading-tight">

@@ -1,14 +1,16 @@
 server:
-  port: 8080
+  port: "${SERVER_PORT:8080}"
 
 spring:
   application:
     name: specification-backend
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/specification_db
-    username: postgres
-    password: "11111111"
+    # Local development defaults; every value can be overridden with the environment variable shown.
+    # The prod profile (application-prod.yml) removes these defaults so production must supply them.
+    url: "${DB_URL:jdbc:postgresql://localhost:5432/specification_db}"
+    username: "${DB_USERNAME:postgres}"
+    password: "${DB_PASSWORD:11111111}"
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -45,11 +47,11 @@ spring:
 
 app:
   cors:
-    allowed-origins: http://localhost:3000,http://localhost:5173,http://localhost:8081,http://localhost:8082,http://localhost:8083,http://localhost:8084,http://localhost:8090
+    allowed-origins: "${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:8081,http://localhost:8082,http://localhost:8083,http://localhost:8084,http://localhost:8090}"
   jwt:
     # Change this secret before deploying to production. Must be >= 256 bits for HS256.
     secret: "${JWT_SECRET:change-this-super-secret-key-for-unza-cict-specification-system-min-32-bytes}"
-    expiration-minutes: 480
+    expiration-minutes: "${JWT_EXPIRATION_MINUTES:480}"
   storage:
     attachments-dir: "${ATTACHMENTS_DIR:./data/attachments}"
   hr:

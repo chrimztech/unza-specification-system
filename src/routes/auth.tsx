@@ -63,7 +63,7 @@ function AuthPage() {
       <section className="relative hidden min-h-screen overflow-hidden bg-sidebar p-10 text-sidebar-foreground lg:flex lg:flex-col xl:p-14">
         <div className="absolute -left-36 -top-36 size-[32rem] rounded-full border border-white/5" />
         <div className="absolute -left-16 -top-16 size-[22rem] rounded-full border border-white/5" />
-        <div className="absolute -bottom-28 -right-24 size-[30rem] rounded-full bg-accent/10 blur-3xl" />
+        <div className="absolute -bottom-28 -right-24 size-[30rem] rounded-full bg-unza-green/35 blur-3xl" />
 
         <Link to="/" className="relative flex items-center gap-3">
           <span className="grid size-12 place-items-center rounded-xl bg-white p-1.5 shadow-xl ring-1 ring-white/15">

@@ -36,7 +36,7 @@ function ProfilePage() {
   const { email, profile, roles } = useAuth();
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="space-y-6">
       <div>
         <p className="label-caps">Account</p>
         <h1 className="mt-1 font-display text-3xl">My staff profile</h1>
@@ -48,7 +48,7 @@ function ProfilePage() {
       </div>
 
       <div className="space-y-5 surface p-6">
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
           <Field label="Institutional email" value={email ?? profile?.email} />
           <Field label="Full name" value={profile?.fullName} />
           <Field label="Staff number" value={profile?.staffNumber} />

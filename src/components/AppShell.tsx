@@ -340,11 +340,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           id="main-content"
           className="min-h-[calc(100vh-76px)] w-full animate-fade-in px-4 py-6 sm:px-6 sm:py-8 lg:px-8 xl:px-10"
         >
-          <div className="mx-auto w-full max-w-[1480px]">{children}</div>
+          <div className="w-full">{children}</div>
         </main>
 
         <footer className="border-t border-border/70 bg-card/55 px-6 py-4 text-center text-[11px] text-muted-foreground lg:text-left">
-          <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <span>Centre for Information and Communications Technology</span>
             <span>{setting("organisation_name")}</span>
           </div>

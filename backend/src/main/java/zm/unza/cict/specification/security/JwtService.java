@@ -6,6 +6,8 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Service;
 import zm.unza.cict.specification.config.AppProperties;
 
@@ -27,8 +29,15 @@ public class JwtService {
     private final SecretKey key;
     private final long expirationMinutes;
 
-    public JwtService(AppProperties properties) {
+    public JwtService(AppProperties properties, Environment environment) {
         String secret = properties.jwt().secret();
+        boolean production = environment.acceptsProfiles(Profiles.of("prod"));
+        if (production && (INSECURE_DEFAULT_SECRET.equals(secret)
+                || secret.getBytes(StandardCharsets.UTF_8).length < 32)) {
+            // Refuse to start rather than issue forgeable tokens in production.
+            throw new IllegalStateException(
+                    "JWT_SECRET must be set to a private value of at least 32 bytes when running with the prod profile.");
+        }
         if (INSECURE_DEFAULT_SECRET.equals(secret)) {
             log.warn("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
             log.warn("!! JWT_SECRET is not set — using the publicly-known default from source.   !!");

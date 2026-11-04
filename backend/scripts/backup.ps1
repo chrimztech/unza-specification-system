@@ -19,7 +19,7 @@
   Postgres host. Default: localhost
 
 .PARAMETER PgPort
-  Postgres port. Default: 5433 (matches application.yml)
+  Postgres port. Default: 5432 (matches application.yml)
 
 .PARAMETER Database
   Database name. Default: specification_db
@@ -57,7 +57,7 @@
 #>
 param(
   [string]$PgHost = "localhost",
-  [int]$PgPort = 5433,
+  [int]$PgPort = 5432,
   [string]$Database = "specification_db",
   [string]$PgUser = "postgres",
   [string]$PgPassword = "11111111",

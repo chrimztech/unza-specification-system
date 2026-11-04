@@ -87,7 +87,7 @@ function Landing() {
     <div className="flex min-h-screen flex-col bg-background">
       <div className="h-1 bg-[image:var(--gradient-gold)]" />
       <header className="sticky top-0 z-40 border-b border-border/80 bg-card/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-[76px] max-w-7xl items-center gap-4 px-5 sm:px-8">
+        <div className="flex h-[76px] items-center gap-4 px-5 sm:px-8 lg:px-12 xl:px-16">
           <Brand />
           <nav
             className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2"
@@ -114,7 +114,7 @@ function Landing() {
         <section className="relative overflow-hidden border-b border-border/70 bg-card">
           <div className="pointer-events-none absolute -left-24 top-20 size-96 rounded-full bg-primary/5 blur-3xl" />
           <div className="pointer-events-none absolute -right-16 top-0 size-[32rem] rounded-full bg-accent/10 blur-3xl" />
-          <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[1.08fr_0.92fr] lg:py-24">
+          <div className="relative grid items-center gap-14 px-5 py-16 sm:px-8 lg:px-12 xl:px-16 sm:py-20 lg:grid-cols-[1.08fr_0.92fr] lg:py-24">
             <div className="animate-fade-in">
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
                 <CheckCircle2 className="size-3.5" />
@@ -151,7 +151,7 @@ function Landing() {
 
             <div className="animate-scale-in lg:pl-5">
               <div className="relative overflow-hidden rounded-2xl bg-sidebar p-6 text-sidebar-foreground shadow-2xl sm:p-8">
-                <div className="absolute right-0 top-0 size-52 rounded-full bg-accent/15 blur-3xl" />
+                <div className="absolute right-0 top-0 size-52 rounded-full bg-unza-green/40 blur-3xl" />
                 <div className="relative">
                   <div className="flex items-center justify-between gap-4">
                     <div>
@@ -179,7 +179,7 @@ function Landing() {
                           <span className="absolute left-[15px] top-10 h-7 w-px bg-white/12" />
                         )}
                         <span
-                          className={`relative z-10 grid size-8 shrink-0 place-items-center rounded-full border ${complete ? "border-success/30 bg-success/18 text-success" : index === 2 ? "border-accent/40 bg-accent/15 text-accent" : "border-white/10 bg-white/5 text-white/35"}`}
+                          className={`relative z-10 grid size-8 shrink-0 place-items-center rounded-full border ${complete ? "border-unza-light-green/40 bg-unza-light-green/15 text-unza-light-green" : index === 2 ? "border-accent/40 bg-accent/15 text-accent" : "border-white/10 bg-white/5 text-white/35"}`}
                         >
                           {complete ? (
                             <Check className="size-4" />
@@ -191,7 +191,7 @@ function Landing() {
                           {label}
                         </span>
                         <span
-                          className={`text-[10px] font-bold uppercase tracking-wider ${complete ? "text-success" : index === 2 ? "text-accent" : "text-white/30"}`}
+                          className={`text-[10px] font-bold uppercase tracking-wider ${complete ? "text-unza-light-green" : index === 2 ? "text-accent" : "text-white/30"}`}
                         >
                           {state}
                         </span>
@@ -219,7 +219,7 @@ function Landing() {
         </section>
 
         <section className="border-b border-border/70 bg-secondary/45">
-          <div className="mx-auto grid max-w-7xl divide-y divide-border/70 px-5 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-8">
+          <div className="grid divide-y divide-border/70 px-5 sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:px-8 lg:px-12 xl:px-16">
             {[
               ["01", "One shared record", "No scattered forms or email chains"],
               ["02", "Clear accountability", "Every decision has an owner and timestamp"],
@@ -238,7 +238,7 @@ function Landing() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20">
+        <section className="px-5 py-16 sm:px-8 lg:px-12 xl:px-16 sm:py-20">
           <div className="max-w-2xl">
             <p className="label-caps text-primary">Built for accountability</p>
             <h2 className="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
@@ -274,7 +274,7 @@ function Landing() {
         </section>
 
         <section className="border-y border-border/70 bg-card">
-          <div className="mx-auto grid max-w-7xl items-center gap-10 px-5 py-16 sm:px-8 lg:grid-cols-[0.85fr_1.15fr] lg:py-20">
+          <div className="grid items-center gap-10 px-5 py-16 sm:px-8 lg:px-12 xl:px-16 lg:grid-cols-[0.85fr_1.15fr] lg:py-20">
             <div>
               <p className="label-caps text-primary">Consistent by design</p>
               <h2 className="mt-3 font-display text-3xl font-extrabold tracking-tight">
@@ -313,9 +313,9 @@ function Landing() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20">
+        <section className="px-5 py-16 sm:px-8 lg:px-12 xl:px-16 sm:py-20">
           <div className="relative overflow-hidden rounded-2xl bg-primary px-6 py-10 text-primary-foreground shadow-lift sm:px-10 lg:flex lg:items-center lg:justify-between lg:gap-8">
-            <div className="absolute -right-10 -top-20 size-72 rounded-full bg-accent/15 blur-3xl" />
+            <div className="absolute -right-10 -top-20 size-72 rounded-full bg-unza-light-green/20 blur-3xl" />
             <div className="relative max-w-2xl">
               <h2 className="font-display text-2xl font-extrabold sm:text-3xl">
                 Ready to submit an equipment request?
@@ -340,7 +340,7 @@ function Landing() {
       </main>
 
       <footer className="border-t border-border bg-card">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-7 text-xs text-muted-foreground sm:px-8">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-7 text-xs text-muted-foreground sm:px-8 lg:px-12 xl:px-16">
           <Brand />
           <span>Centre for Information and Communications Technology</span>
         </div>

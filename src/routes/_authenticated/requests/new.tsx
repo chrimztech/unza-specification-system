@@ -395,7 +395,7 @@ function NewRequest() {
   const progress = Math.round(((step + 1) / STEPS.length) * 100);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8">
+    <div className="space-y-8">
       <header className="surface p-6">
         <p className="label-caps">New submission</p>
         <h1 className="mt-1 font-display text-3xl">CICT equipment request</h1>

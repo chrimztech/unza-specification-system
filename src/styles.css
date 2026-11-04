@@ -4,6 +4,53 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Self-hosted Inter and Manrope variable fonts (SIL Open Font License; see public/fonts/OFL-*.txt).
+ * font-display: swap shows text immediately in the fallback font while these load.
+ */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/inter-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/inter-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/manrope-latin.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/manrope-latin-ext.woff2") format("woff2");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -46,103 +93,124 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --shadow-panel: 0 1px 2px oklch(0.2 0.03 155 / 0.05), 0 6px 18px -12px oklch(0.2 0.03 155 / 0.16);
-  --shadow-lift: 0 2px 5px oklch(0.2 0.03 155 / 0.06), 0 20px 44px -20px oklch(0.2 0.03 155 / 0.3);
-  --shadow-ridge: inset 0 -1px 0 oklch(0.25 0.05 155 / 0.08);
+  --color-unza-green: var(--unza-green);
+  --color-unza-light-green: var(--unza-light-green);
+  --color-unza-orange: var(--unza-orange);
+  --color-unza-brown: var(--unza-brown);
+  --color-unza-red: var(--unza-red);
+  --color-unza-black: var(--unza-black);
+  --shadow-panel:
+    0 1px 2px color-mix(in oklab, var(--unza-black) 5%, transparent),
+    0 6px 18px -12px color-mix(in oklab, var(--unza-black) 16%, transparent);
+  --shadow-lift:
+    0 2px 5px color-mix(in oklab, var(--unza-black) 6%, transparent),
+    0 20px 44px -20px color-mix(in oklab, var(--unza-black) 30%, transparent);
+  --shadow-ridge: inset 0 -1px 0 color-mix(in oklab, var(--unza-black) 8%, transparent);
 }
 
+/*
+ * Official University of Zambia colours (UNZA crest RGB sheet). Every theme colour below is one of
+ * these, or a tint/shade mixed only from them, so the app always matches the University brand.
+ */
 :root {
+  --unza-green: #01862b;
+  --unza-light-green: #93b800;
+  --unza-orange: #f3950c;
+  --unza-brown: #ef942e;
+  --unza-red: #d4000d;
+  --unza-black: #050000;
+
   --radius: 0.75rem;
-  --background: oklch(0.975 0.006 150);
-  --primary-deep: oklch(0.235 0.055 157);
-  --primary-glow: oklch(0.39 0.09 157);
-  --accent-glow: oklch(0.84 0.13 84);
+  --background: color-mix(in oklab, var(--unza-green) 3%, white);
+  --primary-deep: color-mix(in oklab, var(--unza-green) 62%, var(--unza-black));
+  --primary-glow: var(--unza-green);
+  --accent-glow: var(--unza-brown);
   --gradient-crest: linear-gradient(
     118deg,
     var(--primary-deep) 0%,
-    var(--primary) 52%,
+    var(--primary) 60%,
     var(--primary-glow) 100%
   );
   --gradient-gold: linear-gradient(90deg, var(--accent) 0%, var(--accent-glow) 100%);
   --gradient-parchment: linear-gradient(
     180deg,
-    oklch(0.995 0.006 95) 0%,
-    oklch(0.975 0.012 100) 100%
+    white 0%,
+    color-mix(in oklab, var(--unza-orange) 4%, white) 100%
   );
 
-  --foreground: oklch(0.205 0.025 158);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.205 0.025 158);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.03 155);
-  --primary: oklch(0.335 0.088 157);
-  --primary-foreground: oklch(0.98 0.012 95);
-  --secondary: oklch(0.955 0.014 145);
-  --secondary-foreground: oklch(0.3 0.05 156);
-  --muted: oklch(0.955 0.008 150);
-  --muted-foreground: oklch(0.49 0.025 158);
-  --accent: oklch(0.79 0.15 82);
-  --accent-foreground: oklch(0.24 0.05 90);
-  --destructive: oklch(0.52 0.19 27);
-  --destructive-foreground: oklch(0.98 0.01 95);
-  --success: oklch(0.5 0.13 152);
-  --success-foreground: oklch(0.98 0.01 95);
-  --warning: oklch(0.72 0.14 72);
-  --warning-foreground: oklch(0.24 0.05 90);
-  --info: oklch(0.48 0.08 240);
-  --info-foreground: oklch(0.98 0.01 95);
-  --border: oklch(0.9 0.01 150);
-  --input: oklch(0.87 0.012 150);
-  --ring: oklch(0.42 0.1 157);
-  --sidebar: oklch(0.225 0.045 158);
-  --sidebar-foreground: oklch(0.95 0.015 95);
-  --sidebar-primary: oklch(0.76 0.135 82);
-  --sidebar-primary-foreground: oklch(0.24 0.05 90);
-  --sidebar-accent: oklch(1 0 0 / 9%);
-  --sidebar-accent-foreground: oklch(0.97 0.012 95);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.76 0.135 82);
+  --foreground: var(--unza-black);
+  --card: white;
+  --card-foreground: var(--unza-black);
+  --popover: white;
+  --popover-foreground: var(--unza-black);
+  --primary: var(--unza-green);
+  --primary-foreground: white;
+  --secondary: color-mix(in oklab, var(--unza-green) 8%, white);
+  --secondary-foreground: var(--primary-deep);
+  --muted: color-mix(in oklab, var(--unza-green) 5%, white);
+  --muted-foreground: color-mix(in oklab, var(--unza-black) 62%, white);
+  --accent: var(--unza-orange);
+  --accent-foreground: var(--unza-black);
+  --destructive: var(--unza-red);
+  --destructive-foreground: white;
+  --success: var(--unza-green);
+  --success-foreground: white;
+  --warning: var(--unza-orange);
+  --warning-foreground: var(--unza-black);
+  /* Informational states (not a crest colour): a shade of the brand black-green family. */
+  --info: color-mix(in oklab, var(--unza-green) 40%, var(--unza-black));
+  --info-foreground: white;
+  --border: color-mix(in oklab, var(--unza-green) 12%, white);
+  --input: color-mix(in oklab, var(--unza-green) 18%, white);
+  --ring: var(--unza-green);
+  --sidebar: var(--primary-deep);
+  --sidebar-foreground: white;
+  --sidebar-primary: var(--unza-orange);
+  --sidebar-primary-foreground: var(--unza-black);
+  --sidebar-accent: color-mix(in oklab, white 10%, transparent);
+  --sidebar-accent-foreground: white;
+  --sidebar-border: color-mix(in oklab, white 12%, transparent);
+  --sidebar-ring: var(--unza-orange);
 }
 
 .dark {
-  --background: oklch(0.2 0.03 156);
-  --primary-deep: oklch(0.24 0.05 156);
-  --primary-glow: oklch(0.86 0.11 88);
-  --accent-glow: oklch(0.88 0.1 88);
-  --gradient-parchment: linear-gradient(180deg, oklch(0.24 0.035 156) 0%, oklch(0.2 0.03 156) 100%);
-  --foreground: oklch(0.95 0.012 95);
-
-  --card: oklch(0.25 0.035 156);
-  --card-foreground: oklch(0.95 0.012 95);
-  --popover: oklch(0.25 0.035 156);
-  --popover-foreground: oklch(0.95 0.012 95);
-  --primary: oklch(0.76 0.135 82);
-  --primary-foreground: oklch(0.24 0.05 90);
-  --secondary: oklch(0.3 0.04 156);
-  --secondary-foreground: oklch(0.95 0.012 95);
-  --muted: oklch(0.3 0.03 156);
-  --muted-foreground: oklch(0.75 0.02 110);
-  --accent: oklch(0.76 0.135 82);
-  --accent-foreground: oklch(0.24 0.05 90);
-  --destructive: oklch(0.6 0.19 27);
-  --destructive-foreground: oklch(0.98 0.01 95);
-  --success: oklch(0.65 0.13 152);
-  --success-foreground: oklch(0.2 0.03 156);
-  --warning: oklch(0.78 0.14 72);
-  --warning-foreground: oklch(0.24 0.05 90);
-  --info: oklch(0.68 0.09 240);
-  --info-foreground: oklch(0.2 0.03 156);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.76 0.135 82);
-  --sidebar: oklch(0.24 0.035 156);
-  --sidebar-foreground: oklch(0.95 0.012 95);
-  --sidebar-primary: oklch(0.76 0.135 82);
-  --sidebar-primary-foreground: oklch(0.24 0.05 90);
-  --sidebar-accent: oklch(0.3 0.04 156);
-  --sidebar-accent-foreground: oklch(0.95 0.012 95);
-  --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.76 0.135 82);
+  --background: color-mix(in oklab, var(--unza-black) 90%, var(--unza-green));
+  --primary-deep: color-mix(in oklab, var(--unza-black) 80%, var(--unza-green));
+  --primary-glow: var(--unza-brown);
+  --accent-glow: var(--unza-brown);
+  --gradient-parchment: linear-gradient(180deg, var(--card) 0%, var(--background) 100%);
+  --foreground: white;
+  --card: color-mix(in oklab, var(--unza-black) 84%, var(--unza-green));
+  --card-foreground: white;
+  --popover: var(--card);
+  --popover-foreground: white;
+  --primary: var(--unza-orange);
+  --primary-foreground: var(--unza-black);
+  --secondary: color-mix(in oklab, var(--unza-black) 76%, var(--unza-green));
+  --secondary-foreground: white;
+  --muted: var(--secondary);
+  --muted-foreground: color-mix(in oklab, white 70%, var(--unza-black));
+  --accent: var(--unza-orange);
+  --accent-foreground: var(--unza-black);
+  --destructive: var(--unza-red);
+  --destructive-foreground: white;
+  --success: var(--unza-light-green);
+  --success-foreground: var(--unza-black);
+  --warning: var(--unza-orange);
+  --warning-foreground: var(--unza-black);
+  --info: var(--unza-light-green);
+  --info-foreground: var(--unza-black);
+  --border: color-mix(in oklab, white 12%, transparent);
+  --input: color-mix(in oklab, white 16%, transparent);
+  --ring: var(--unza-orange);
+  --sidebar: var(--primary-deep);
+  --sidebar-foreground: white;
+  --sidebar-primary: var(--unza-orange);
+  --sidebar-primary-foreground: var(--unza-black);
+  --sidebar-accent: var(--secondary);
+  --sidebar-accent-foreground: white;
+  --sidebar-border: color-mix(in oklab, white 12%, transparent);
+  --sidebar-ring: var(--unza-orange);
 }
 
 @layer base {

@@ -30,7 +30,7 @@
 param(
   [string]$BackupPath = "",
   [string]$PgHost = "localhost",
-  [int]$PgPort = 5433,
+  [int]$PgPort = 5432,
   [string]$Database = "specification_db",
   [string]$PgUser = "postgres",
   [string]$PgPassword = "11111111",
