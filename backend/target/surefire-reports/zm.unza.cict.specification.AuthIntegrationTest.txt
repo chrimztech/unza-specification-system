@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: zm.unza.cict.specification.AuthIntegrationTest
--------------------------------------------------------------------------------
-Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 37.32 s -- in zm.unza.cict.specification.AuthIntegrationTest
