@@ -11,6 +11,7 @@ import type {
   UserResponse,
 } from "@/lib/api-types";
 import { useAuth } from "@/hooks/useAuth";
+import { uniqueId } from "@/lib/utils";
 import { recommendTier } from "@/lib/domain";
 import { useLookup, useSettings } from "@/hooks/useLookups";
 
@@ -90,7 +91,7 @@ type Item = {
 };
 
 const emptyItem = (): Item => ({
-  key: crypto.randomUUID(),
+  key: uniqueId(),
   category_id: "",
   quantity: 1,
   purpose: "",

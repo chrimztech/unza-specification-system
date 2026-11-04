@@ -47,6 +47,17 @@ public class NotificationService {
         } else {
             recipients.add(request.getRequester().getId());
             recipients.add(request.getSubmittedBy().getId());
+            // Downstream stages: also tell the team whose queue the request has just entered.
+            AppRole nextTeam = switch (request.getStatus()) {
+                case APPROVED, RETURN_REQUIRED -> AppRole.PROCUREMENT;
+                case PURCHASED -> AppRole.STORES;
+                case IN_STORES -> AppRole.CICT_SUPPORT;
+                default -> null;
+            };
+            if (nextTeam != null) {
+                userRoleAssignmentRepository.findByRoleIn(List.of(nextTeam))
+                        .forEach(a -> recipients.add(a.getUser().getId()));
+            }
         }
 
         String statusLabel = request.getStatus().dbValue().replace('_', ' ');

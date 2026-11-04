@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export const Route = createFileRoute("/_authenticated/requests/$id")({
+export const Route = createFileRoute("/_authenticated/requests/$id/")({
   head: () => ({
     meta: [
       { title: "Request detail · UNZA CICT Specification System" },

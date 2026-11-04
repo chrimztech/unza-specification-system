@@ -85,6 +85,10 @@ try {
   & pg_dump --host=$PgHost --port=$PgPort --username=$PgUser --format=custom --compress=9 `
     --file="$destination\database.dump" $Database
   if ($LASTEXITCODE -ne 0) { throw "pg_dump exited with code $LASTEXITCODE" }
+  # Prove the archive is readable now, not on the day it is needed.
+  $tableCount = (& pg_restore --list "$destination\database.dump" | Select-String " TABLE DATA ").Count
+  if ($LASTEXITCODE -ne 0 -or $tableCount -eq 0) { throw "The new dump could not be read back - do not rely on this backup." }
+  Write-Output "Verified: dump is readable and contains data for $tableCount tables."
 } finally {
   Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue
 }
@@ -108,6 +112,8 @@ $manifest = [ordered]@{
   database           = $Database
   pgHost             = $PgHost
   pgPort             = $PgPort
+  tablesWithData     = $tableCount
+  databaseDumpBytes  = (Get-Item "$destination\database.dump").Length
   attachmentsBackedUp = $attachmentsBackedUp
   attachmentsSourceDir = $AttachmentsDir
 }

@@ -85,7 +85,6 @@ function AdminPage() {
           <TabsTrigger value="profiles">Specification profiles</TabsTrigger>
           <TabsTrigger value="lists">Lists</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
-          <TabsTrigger value="audit">Audit log</TabsTrigger>
         </TabsList>
 
         <TabsContent value="roles" className="mt-6">
@@ -108,9 +107,6 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="settings" className="mt-6">
           <SettingsPanel />
-        </TabsContent>
-        <TabsContent value="audit" className="mt-6">
-          <AuditPanel />
         </TabsContent>
       </Tabs>
     </div>
@@ -421,148 +417,6 @@ function SpecProfilesPanel() {
           </table>
         </div>
       )}
-    </section>
-  );
-}
-
-type AuditEntry = RequestEventResponse & { requestReference: string; requestTitle: string | null };
-
-function AuditPanel() {
-  const [clearing, setClearing] = useState(false);
-  const {
-    data = [],
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
-    queryKey: ["admin-audit-log"],
-    queryFn: async () => {
-      const requests = await apiGet<RequestResponse[]>("/api/requests");
-      const recent = [...requests]
-        .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
-        .slice(0, 60);
-      const perRequest = await Promise.all(
-        recent.map(async (r) => {
-          const events = await apiGet<RequestEventResponse[]>(`/api/requests/${r.id}/events`);
-          return events.map((e) => ({
-            ...e,
-            requestReference: r.reference,
-            requestTitle: r.title,
-          }));
-        }),
-      );
-      const merged: AuditEntry[] = perRequest.flat();
-      merged.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-      return merged.slice(0, 100);
-    },
-  });
-
-  const system = useQuery({
-    queryKey: ["admin-system-audit-log"],
-    queryFn: () => apiGet<AuditLogResponse[]>("/api/audit-log?limit=200"),
-  });
-
-  async function clearAuditLog() {
-    if (
-      !confirm("Permanently clear the system & configuration audit log? This cannot be undone.")
-    ) {
-      return;
-    }
-    setClearing(true);
-    try {
-      await apiDelete("/api/audit-log");
-      toast.success("Audit log cleared");
-      system.refetch();
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Could not clear the audit log");
-    } finally {
-      setClearing(false);
-    }
-  }
-
-  return (
-    <section className="space-y-8">
-      <div className="space-y-4">
-        <h2 className="font-display text-lg">Request workflow events</h2>
-        <p className="text-sm text-muted-foreground">
-          The 100 most recent workflow events recorded across the most recently updated requests.
-        </p>
-        {isError && (
-          <QueryError message="Could not load the workflow event log." onRetry={() => refetch()} />
-        )}
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading audit log…</p>
-        ) : data.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No workflow activity recorded yet.</p>
-        ) : (
-          <ol className="space-y-3">
-            {data.map((e) => (
-              <li key={e.id} className="border border-border p-3">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="text-sm font-medium">
-                    {e.actorName || "System"} · {String(e.action).replace(/_/g, " ")}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(e.createdAt).toLocaleString()}
-                  </span>
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  {e.requestReference ? `${e.requestReference} — ${e.requestTitle}` : "Request"}
-                  {e.toStatus ? ` · → ${String(e.toStatus).replace(/_/g, " ")}` : ""}
-                </div>
-                {e.comment ? <p className="mt-2 text-sm">{e.comment}</p> : null}
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
-
-      <div className="space-y-4 border-t border-border pt-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-display text-lg">System & configuration changes</h2>
-            <p className="text-sm text-muted-foreground">
-              Role assignments, organisational units, equipment categories, specification profiles,
-              lists, settings, attachments and delegations — who changed what, and when.
-            </p>
-          </div>
-          <Button
-            size="sm"
-            variant="destructive"
-            disabled={clearing || (system.data ?? []).length === 0}
-            onClick={clearAuditLog}
-          >
-            Clear audit log
-          </Button>
-        </div>
-        {system.isError && (
-          <QueryError
-            message="Could not load the system audit log."
-            onRetry={() => system.refetch()}
-          />
-        )}
-        {system.isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading system audit log…</p>
-        ) : (system.data ?? []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">No configuration changes recorded yet.</p>
-        ) : (
-          <ol className="space-y-3">
-            {(system.data ?? []).map((e) => (
-              <li key={e.id} className="border border-border p-3">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="text-sm font-medium">
-                    {e.actorEmail || "System"} · {e.entityType} · {e.action.replace(/_/g, " ")}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(e.createdAt).toLocaleString()}
-                  </span>
-                </div>
-                {e.details ? <p className="mt-1 text-sm">{e.details}</p> : null}
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
     </section>
   );
 }

@@ -6,7 +6,7 @@ from docgen import (Doc, pipeline, figure, box, arrow, CONTENT_W, GREEN, GREEN_D
 
 OUT, LOGO = sys.argv[1], sys.argv[2]
 d = Doc(OUT, "User Manual", "Equipment Specification & Request Management System",
-        "User Manual", "1.1", "18 October 2026", "All University of Zambia staff who use the system", LOGO)
+        "User Manual", "1.2", "4 November 2026", "All University of Zambia staff who use the system", LOGO)
 
 d.toc_page()
 
@@ -370,7 +370,9 @@ d.p("If you no longer need the equipment, open the request and click **Withdraw*
 d.callout("warning", "Withdrawing cannot be undone. To ask again later, make a new request.")
 d.h2("Printable documents")
 d.p("Each request produces official documents on University letterhead as it progresses. Open the request and "
-    "click the document's button, then **Print** (choose *Save as PDF* in the print dialog to keep an electronic copy).")
+    "click the document's button, then **Print / save as PDF**. In the print dialog choose *Save as PDF* as the "
+    "destination to keep an electronic copy; A4 portrait is recommended. Each document shows page numbers and who "
+    "generated it, and every print is recorded in the audit log.")
 d.table(["Document", "Available once the request is…", "Used for"], [
     ("**Printable request form**", "Any status", "A paper copy of the request."),
     ("**Specification sheet**", "CICT approved (and after)", "The approved minimum specification, given to Procurement and suppliers."),
@@ -533,14 +535,22 @@ d.bullets([
 d.h2("Staff directory")
 d.p("**Directory** lists registered staff with their organisational unit, position level and system roles, and "
     "the organisational units. Use the search box to find a person by name, email, job title or unit.")
-d.h2("Audit workspace")
-d.p("Auditors and administrators can open **Audit log** to review every request's record. Search by reference, "
-    "title or unit, open any request to read its full audit trail, and use **Export CSV** to take the data into "
-    "Excel for analysis.")
+d.h2("Printing reports and registers")
+d.bullets([
+    "**Requests** page: set the filters, then **Print register** for a register of exactly those requests, or **Export CSV** to open them in Excel.",
+    "**Reports** page: optionally choose *Raised from* and *Raised to*, then **Print report** for a Management Report covering that period.",
+])
+d.h2("Audit log")
+d.p("Auditors and administrators open **Audit log** from the menu. It has two tabs.")
+d.bullets([
+    "**Activity log**: a permanent record of who did what, when and from which computer: sign-ins (including failed and blocked attempts), every request decision, procurement and stores records, configuration and role changes, attachments and documents printed. Filter by dates, category, user (name or email) or any text. Failed sign-ins and restores are highlighted. Use **Export CSV** or **Print / PDF** for an Audit Trail Report.",
+    "**Request records**: every request with its decisions, filterable by status, unit or text, with **Export CSV** and **Print register**.",
+])
+d.callout("info", "Nobody can edit or delete audit entries, not even administrators. If the database is ever restored from a backup, the restore itself is recorded.")
 
 # ------------------------------------------------------------------ 13 admin
 d.h1("Administrators")
-d.lead("Administration is available only to CICT administrators. It has eight tabs.")
+d.lead("Administration is available only to CICT administrators. It has seven tabs. The audit log has its own page (see Oversight).")
 d.h2("Staff roles")
 d.p("Search for a person by name or email. Each role appears as a button beside their name; click a role to "
     "give it, and click it again to remove it. Changes take effect immediately.")
@@ -583,11 +593,7 @@ d.table(["Setting", "Effect"], [
     ("Declaration text", "The statement requesters must accept before submitting."),
     ("Manager SLA days / CICT SLA days", "The turnaround targets shown to users."),
 ], [0.35, 0.65])
-d.h2("Audit log")
-d.p("Shows two logs: **Request workflow events** (every request action) and **System & configuration changes** "
-    "(roles, units, categories, profiles, accounts and procurement records).")
-d.callout("warning", "**Clear audit log** permanently deletes the system audit history. Export or back it up first, and "
-          "only clear it in line with University records policy.")
+
 
 # ------------------------------------------------------------------ 14 help
 d.h1("Frequently asked questions")

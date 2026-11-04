@@ -18,6 +18,7 @@ import java.util.UUID;
 public class RequestEventService {
 
     private final RequestEventRepository requestEventRepository;
+    private final AuditLogService auditLogService;
 
     @Transactional
     public void log(Request request, UUID actorId, String actorName, String action,
@@ -31,6 +32,18 @@ public class RequestEventService {
                 .toStatus(to)
                 .comment(comment)
                 .build());
+
+        // Every workflow step also goes into the system-wide audit trail.
+        StringBuilder details = new StringBuilder(request.getReference() != null ? request.getReference() : "Draft request");
+        if (to != null && to != from) {
+            details.append(" · ").append(from != null ? label(from) : "new").append(" → ").append(label(to));
+        }
+        if (comment != null && !comment.isBlank()) details.append(" · ").append(comment.trim());
+        auditLogService.log("Request", request.getId() != null ? request.getId().toString() : null, action, details.toString());
+    }
+
+    private static String label(RequestStatus status) {
+        return status.dbValue().replace('_', ' ');
     }
 
     @Transactional(readOnly = true)

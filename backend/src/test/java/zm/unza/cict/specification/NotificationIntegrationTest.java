@@ -80,6 +80,57 @@ class NotificationIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void procurementStoresAndSupportAreToldWhenWorkReachesTheirQueue() throws Exception {
+        HrStaff admin = freshStaff("notify-pipe-admin");
+        HrStaff procurement = freshStaff("notify-pipe-procurement");
+        HrStaff stores = freshStaff("notify-pipe-stores");
+        HrStaff support = freshStaff("notify-pipe-support");
+        String adminToken = loginAs(admin);
+        String procurementToken = loginAs(procurement);
+        String storesToken = loginAs(stores);
+        String supportToken = loginAs(support);
+        grantRole(admin.email(), AppRole.ADMIN);
+        grantRole(procurement.email(), AppRole.PROCUREMENT);
+        grantRole(stores.email(), AppRole.STORES);
+        grantRole(support.email(), AppRole.CICT_SUPPORT);
+
+        // The admin stands in for requester, manager and CICT so the pipeline can be walked.
+        String id = createAndSubmit(adminToken, userId(admin));
+        decide(adminToken, id, "manager-decision", "approved", "pending_cict");
+        decide(adminToken, id, "cict-decision", "approved", "approved");
+        assertEquals(List.of("approved"), statusesNotified(procurementToken, id));
+        assertEquals(List.of(), statusesNotified(storesToken, id));
+
+        String quotation = mockMvc.perform(post("/api/requests/" + id + "/quotations")
+                        .header("Authorization", bearer(adminToken))
+                        .contentType("application/json")
+                        .content("{\"vendorName\":\"Acme\",\"amount\":1000}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String quotationId = objectMapper.readTree(quotation).get("id").asText();
+        pipelineStep(adminToken, id, "quotations/" + quotationId + "/evaluate", "{\"result\":\"pass\"}");
+        pipelineStep(adminToken, id, "purchase",
+                "{\"quotationId\":\"%s\",\"vendorName\":\"Acme\",\"amount\":1000}".formatted(quotationId));
+        assertEquals(List.of("purchased"), statusesNotified(storesToken, id));
+        assertEquals(List.of(), statusesNotified(supportToken, id));
+
+        pipelineStep(adminToken, id, "stores-receipt", "{}");
+        assertEquals(List.of("in stores"), statusesNotified(supportToken, id));
+
+        pipelineStep(adminToken, id, "verification", "{\"result\":\"needs_return\",\"notes\":\"Wrong model\"}");
+        assertEquals(List.of("return required", "approved"), statusesNotified(procurementToken, id));
+        assertEquals(List.of("purchased"), statusesNotified(storesToken, id));
+    }
+
+    private void pipelineStep(String token, String id, String path, String body) throws Exception {
+        mockMvc.perform(post("/api/requests/" + id + "/" + path)
+                        .header("Authorization", bearer(token))
+                        .contentType("application/json")
+                        .content(body))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void anActiveDelegateIsNotifiedAndCanApproveForTheManager() throws Exception {
         HrStaff requester = freshStaff("notify-deleg-requester");
         HrStaff manager = freshStaff("notify-deleg-manager");

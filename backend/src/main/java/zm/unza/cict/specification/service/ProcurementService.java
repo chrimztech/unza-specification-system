@@ -252,7 +252,6 @@ public class ProcurementService {
         eventService.log(request, actor.id(), actor.email(), "Procurement restarted after return",
                 from, request.getStatus(), null);
         notificationService.notifyStatusChange(request, from, actor.id());
-        auditLogService.log("Request", request.getId().toString(), "restart_procurement", request.getReference());
     }
 
     private void requireRole(AuthenticatedUser actor, String role, String message) {

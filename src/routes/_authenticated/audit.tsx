@@ -1,12 +1,28 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { ChevronLeft, ChevronRight, Download, Printer, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useRequests, unitName } from "@/lib/requests";
+import { compact, downloadCsv, filterRequests, unitName, useRequests } from "@/lib/requests";
+import {
+  AUDIT_EXPORT_LIMIT,
+  actionLabel,
+  actorLabel,
+  categoryLabel,
+  fetchAuditPage,
+  isWarning,
+  useAuditCategories,
+  useAuditPage,
+  type AuditFilters,
+} from "@/lib/audit";
+import { ApiError } from "@/lib/api-client";
 import { StatusBadge } from "@/components/StatusBadge";
 import { QueryError } from "@/components/QueryError";
 import { formatDate, formatDateTime, STATUS_LABEL, type RequestStatus } from "@/lib/domain";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -14,151 +30,399 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/audit")({
   head: () => ({
     meta: [
-      { title: "Audit workspace · UNZA CICT Specification System" },
+      { title: "Audit log · UNZA CICT Specification System" },
       {
         name: "description",
         content:
-          "Oversight audit workspace for CICT equipment request records, approval history and exports.",
-      },
-      { property: "og:title", content: "Audit workspace · UNZA CICT" },
-      {
-        property: "og:description",
-        content: "Read-only audit view of request records, decisions and configuration history.",
+          "Tamper-resistant record of sign-ins, request decisions, procurement, configuration changes and documents printed.",
       },
     ],
   }),
   component: AuditPage,
 });
 
-const STATUSES = ["all", ...Object.keys(STATUS_LABEL)] as ("all" | RequestStatus)[];
+const PAGE_SIZE = 50;
+
+/** Delays a fast-changing value (typing) so the server isn't queried on every keystroke. */
+function useDebounced<T>(value: T, ms = 350) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), ms);
+    return () => clearTimeout(t);
+  }, [value, ms]);
+  return debounced;
+}
 
 function AuditPage() {
   const { hasRole } = useAuth();
-  const requests = useRequests();
-  const [status, setStatus] = useState<"all" | RequestStatus>("all");
-  const [unit, setUnit] = useState("all");
-  const [search, setSearch] = useState("");
-
-  const sorted = useMemo(
-    () => [...(requests.data ?? [])].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
-    [requests.data],
-  );
-
-  const units = useMemo(
-    () => Array.from(new Set(sorted.map((r) => unitName(r)).filter((u): u is string => !!u))),
-    [sorted],
-  );
-
-  const rows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return sorted.filter((r) => {
-      if (status !== "all" && r.status !== status) return false;
-      if (unit !== "all" && unitName(r) !== unit) return false;
-      if (q && !`${r.reference} ${r.title ?? ""} ${unitName(r) ?? ""}`.toLowerCase().includes(q))
-        return false;
-      return true;
-    });
-  }, [sorted, status, unit, search]);
-
-  const stats = useMemo(() => {
-    const total = rows.length;
-    const approved = rows.filter((r) => r.status === "approved").length;
-    const rejected = rows.filter((r) => r.status === "rejected").length;
-    const pending = rows.filter((r) =>
-      ["pending_manager", "pending_cict", "needs_clarification"].includes(r.status),
-    ).length;
-    return { total, approved, rejected, pending };
-  }, [rows]);
-
-  function exportCsv() {
-    const header = [
-      "Reference",
-      "Title",
-      "Unit",
-      "Status",
-      "Priority",
-      "Created",
-      "Submitted",
-      "Manager decided",
-      "CICT decided",
-      "Manager note",
-      "CICT note",
-    ];
-    const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
-    const lines = [
-      header.join(","),
-      ...rows.map((r) =>
-        [
-          r.reference,
-          r.title || "Untitled request",
-          unitName(r) || "",
-          STATUS_LABEL[r.status],
-          r.priority ?? "",
-          formatDateTime(r.createdAt),
-          formatDateTime(r.submittedAt),
-          formatDateTime(r.managerDecidedAt),
-          formatDateTime(r.cictDecidedAt),
-          r.managerDecisionNote || "",
-          r.cictDecisionNote || "",
-        ]
-          .map((v) => escape(String(v ?? "").replace(/\n/g, " ")))
-          .join(","),
-      ),
-    ];
-    const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `unza-cict-audit-export-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }
+  const allowed = hasRole("auditor") || hasRole("admin");
 
   return (
     <div className="space-y-6">
       <div>
         <p className="label-caps">Oversight</p>
-        <h1 className="mt-1 font-display text-3xl">Audit workspace</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Read-only oversight view of request records, decision history and approval evidence.
+        <h1 className="mt-1 font-display text-3xl">Audit log</h1>
+        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+          A permanent record of who did what, when and from where: sign-ins, every request decision,
+          procurement and stores records, configuration and role changes, and official documents
+          printed. Entries cannot be edited or deleted.
         </p>
       </div>
 
-      {!hasRole("auditor") && !hasRole("admin") && (
+      {!allowed ? (
         <div className="rounded-md border border-warning/40 bg-warning/10 p-4 text-sm text-warning-foreground">
           <ShieldCheck className="mb-1 mr-2 inline size-4" />
-          This workspace is intended for auditors and system administrators.
+          The audit log is available to auditors and system administrators only.
+        </div>
+      ) : (
+        <Tabs defaultValue="activity">
+          <TabsList>
+            <TabsTrigger value="activity">Activity log</TabsTrigger>
+            <TabsTrigger value="records">Request records</TabsTrigger>
+          </TabsList>
+          <TabsContent value="activity" className="mt-6">
+            <ActivityLog />
+          </TabsContent>
+          <TabsContent value="records" className="mt-6">
+            <RequestRecords />
+          </TabsContent>
+        </Tabs>
+      )}
+    </div>
+  );
+}
+
+function ActivityLog() {
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [entityType, setEntityType] = useState("all");
+  const [actorInput, setActorInput] = useState("");
+  const [qInput, setQInput] = useState("");
+  const [page, setPage] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  const actor = useDebounced(actorInput.trim());
+  const q = useDebounced(qInput.trim());
+
+  const filters: AuditFilters = useMemo(
+    () => ({
+      from: from || undefined,
+      to: to || undefined,
+      entityType: entityType === "all" ? undefined : entityType,
+      actor: actor || undefined,
+      q: q || undefined,
+    }),
+    [from, to, entityType, actor, q],
+  );
+  useEffect(() => setPage(0), [filters]);
+
+  const log = useAuditPage(filters, page, PAGE_SIZE);
+  const categories = useAuditCategories();
+  const total = log.data?.total ?? 0;
+  const items = log.data?.items ?? [];
+  const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1);
+
+  async function exportCsv() {
+    setExporting(true);
+    try {
+      const all = await fetchAuditPage(filters, 0, AUDIT_EXPORT_LIMIT);
+      downloadCsv(
+        `unza-cict-audit-log-${new Date().toISOString().slice(0, 10)}.csv`,
+        [
+          "Date & time",
+          "Name",
+          "Email",
+          "Category",
+          "Action",
+          "Details",
+          "Record ID",
+          "IP address",
+        ],
+        all.items.map((e) => [
+          formatDateTime(e.createdAt),
+          e.actorName ?? "",
+          e.actorEmail ?? "",
+          categoryLabel(e.entityType),
+          actionLabel(e.action),
+          e.details ?? "",
+          e.entityId ?? "",
+          e.ipAddress ?? "",
+        ]),
+      );
+      if (all.total > all.items.length)
+        toast.warning(
+          `Exported the newest ${all.items.length} of ${all.total} entries. Narrow the dates to export the rest.`,
+        );
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Could not export the audit log.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function clearFilters() {
+    setFrom("");
+    setTo("");
+    setEntityType("all");
+    setActorInput("");
+    setQInput("");
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div>
+          <Label htmlFor="audit-from" className="label-caps mb-1.5 block">
+            From
+          </Label>
+          <Input
+            id="audit-from"
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="audit-to" className="label-caps mb-1.5 block">
+            To
+          </Label>
+          <Input id="audit-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        </div>
+        <div>
+          <Label className="label-caps mb-1.5 block">Category</Label>
+          <Select value={entityType} onValueChange={setEntityType}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All categories</SelectItem>
+              {(categories.data ?? []).map((c) => (
+                <SelectItem key={c} value={c}>
+                  {categoryLabel(c)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="audit-actor" className="label-caps mb-1.5 block">
+            User
+          </Label>
+          <Input
+            id="audit-actor"
+            value={actorInput}
+            onChange={(e) => setActorInput(e.target.value)}
+            placeholder="Name or email"
+          />
+        </div>
+        <div>
+          <Label htmlFor="audit-q" className="label-caps mb-1.5 block">
+            Search
+          </Label>
+          <Input
+            id="audit-q"
+            value={qInput}
+            onChange={(e) => setQInput(e.target.value)}
+            placeholder="Reference, detail, action…"
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          {log.isLoading
+            ? "Loading…"
+            : total === 0
+              ? "No entries match these filters."
+              : `Showing ${page * PAGE_SIZE + 1}–${page * PAGE_SIZE + items.length} of ${total.toLocaleString()} entries, newest first.`}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            Clear filters
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportCsv}
+            disabled={exporting || total === 0}
+          >
+            <Download />
+            {exporting ? "Exporting…" : "Export CSV"}
+          </Button>
+          <Button asChild size="sm" disabled={total === 0}>
+            <Link to="/audit/print" search={compact(filters)}>
+              <Printer />
+              Print / PDF
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      {log.isError && (
+        <QueryError message="Could not load the audit log." onRetry={() => log.refetch()} />
+      )}
+
+      <div className="surface overflow-x-auto">
+        <table className="data-table min-w-[960px] text-sm">
+          <thead>
+            <tr>
+              <th>Date &amp; time</th>
+              <th>User</th>
+              <th>Category</th>
+              <th>Action</th>
+              <th>Details</th>
+              <th>IP address</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((e) => (
+              <tr key={e.id} className={isWarning(e) ? "bg-destructive/5" : undefined}>
+                <td className="whitespace-nowrap text-xs text-muted-foreground">
+                  {formatDateTime(e.createdAt)}
+                </td>
+                <td>
+                  <div className="font-medium">{actorLabel(e)}</div>
+                  {e.actorName && e.actorEmail && (
+                    <div className="text-xs text-muted-foreground">{e.actorEmail}</div>
+                  )}
+                </td>
+                <td className="whitespace-nowrap text-muted-foreground">
+                  {categoryLabel(e.entityType)}
+                </td>
+                <td className={isWarning(e) ? "font-semibold text-destructive" : "font-medium"}>
+                  {actionLabel(e.action)}
+                </td>
+                <td className="max-w-md">
+                  {e.entityType === "Request" && e.entityId ? (
+                    <Link
+                      to="/requests/$id"
+                      params={{ id: e.entityId }}
+                      className="hover:text-primary hover:underline"
+                    >
+                      {e.details || "Open request"}
+                    </Link>
+                  ) : (
+                    e.details || "—"
+                  )}
+                </td>
+                <td className="whitespace-nowrap font-mono text-xs text-muted-foreground">
+                  {e.ipAddress || "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {total > PAGE_SIZE && (
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page === 0}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+          >
+            <ChevronLeft />
+            Newer
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {page + 1} of {lastPage + 1}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= lastPage}
+            onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
+          >
+            Older
+            <ChevronRight />
+          </Button>
         </div>
       )}
+    </div>
+  );
+}
 
+const STATUSES = ["all", ...Object.keys(STATUS_LABEL)] as ("all" | RequestStatus)[];
+
+function RequestRecords() {
+  const { userId } = useAuth();
+  const requests = useRequests();
+  const [status, setStatus] = useState<"all" | RequestStatus>("all");
+  const [unit, setUnit] = useState("all");
+  const [search, setSearch] = useState("");
+
+  const units = useMemo(
+    () =>
+      Array.from(
+        new Set((requests.data ?? []).map((r) => unitName(r)).filter((u): u is string => !!u)),
+      ).sort(),
+    [requests.data],
+  );
+  const rows = useMemo(
+    () => filterRequests(requests.data ?? [], { status, unit, q: search }, userId),
+    [requests.data, status, unit, search, userId],
+  );
+
+  function exportCsv() {
+    downloadCsv(
+      `unza-cict-request-records-${new Date().toISOString().slice(0, 10)}.csv`,
+      [
+        "Reference",
+        "Title",
+        "Unit",
+        "Requester",
+        "Status",
+        "Priority",
+        "Created",
+        "Submitted",
+        "Manager",
+        "Manager decided",
+        "Manager note",
+        "CICT decided by",
+        "CICT decided",
+        "CICT note",
+      ],
+      rows.map((r) => [
+        r.reference,
+        r.title || "Untitled request",
+        unitName(r) || "",
+        r.requester.fullName,
+        STATUS_LABEL[r.status],
+        r.priority ?? "",
+        formatDateTime(r.createdAt),
+        formatDateTime(r.submittedAt),
+        r.manager?.fullName ?? "",
+        formatDateTime(r.managerDecidedAt),
+        r.managerDecisionNote || "",
+        r.cictDecidedBy?.fullName ?? "",
+        formatDateTime(r.cictDecidedAt),
+        r.cictDecisionNote || "",
+      ]),
+    );
+  }
+
+  return (
+    <div className="space-y-5">
       {requests.isError && (
-        <QueryError message="Could not load audit records." onRetry={() => requests.refetch()} />
+        <QueryError message="Could not load request records." onRetry={() => requests.refetch()} />
       )}
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Records visible" value={stats.total.toString()} />
-        <StatCard label="Approved" value={stats.approved.toString()} />
-        <StatCard label="Rejected" value={stats.rejected.toString()} />
-        <StatCard label="Pending" value={stats.pending.toString()} />
-      </div>
 
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-wrap gap-3">
           <div className="w-64">
-            <label className="label-caps mb-1.5 block">Search</label>
+            <Label className="label-caps mb-1.5 block">Search</Label>
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Reference, title or unit"
             />
           </div>
-          <div className="w-44">
-            <label className="label-caps mb-1.5 block">Status</label>
+          <div className="w-48">
+            <Label className="label-caps mb-1.5 block">Status</Label>
             <Select value={status} onValueChange={(v) => setStatus(v as "all" | RequestStatus)}>
               <SelectTrigger>
                 <SelectValue />
@@ -172,8 +436,8 @@ function AuditPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="w-52">
-            <label className="label-caps mb-1.5 block">Organisational unit</label>
+          <div className="w-56">
+            <Label className="label-caps mb-1.5 block">Organisational unit</Label>
             <Select value={unit} onValueChange={setUnit}>
               <SelectTrigger>
                 <SelectValue />
@@ -189,44 +453,54 @@ function AuditPage() {
             </Select>
           </div>
         </div>
-        <Button variant="outline" onClick={exportCsv} disabled={rows.length === 0}>
-          <Download className="mr-2 size-4" />
-          Export CSV
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={exportCsv} disabled={rows.length === 0}>
+            <Download />
+            Export CSV
+          </Button>
+          <Button asChild variant="outline">
+            <Link
+              to="/requests/register"
+              search={compact({
+                status: status === "all" ? undefined : status,
+                unit: unit === "all" ? undefined : unit,
+                q: search.trim() || undefined,
+              })}
+            >
+              <Printer />
+              Print register
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      <div className="overflow-hidden surface">
-        <table className="w-full text-sm">
-          <thead className="bg-secondary/60">
-            <tr className="text-left">
-              <th className="px-4 py-2.5 font-semibold">Reference</th>
-              <th className="px-4 py-2.5 font-semibold">Title</th>
-              <th className="hidden px-4 py-2.5 font-semibold md:table-cell">Unit</th>
-              <th className="hidden px-4 py-2.5 font-semibold sm:table-cell">Submitted</th>
-              <th className="px-4 py-2.5 font-semibold">Status</th>
-              <th className="px-4 py-2.5 font-semibold">View</th>
+      <div className="surface overflow-x-auto">
+        <table className="data-table min-w-[760px] text-sm">
+          <thead>
+            <tr>
+              <th>Reference</th>
+              <th>Title</th>
+              <th>Unit</th>
+              <th>Submitted</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                  No requests match the current filters.
+                <td colSpan={5} className="py-8 text-center text-muted-foreground">
+                  {requests.isLoading ? "Loading…" : "No requests match the current filters."}
                 </td>
               </tr>
             ) : (
               rows.map((r) => (
-                <tr key={r.id} className="border-t border-border hover:bg-secondary/30">
-                  <td className="px-4 py-3 font-mono text-xs">
-                    <Link
-                      to="/requests/$id"
-                      params={{ id: r.id }}
-                      className="underline-offset-2 hover:underline"
-                    >
+                <tr key={r.id}>
+                  <td className="font-mono text-xs">
+                    <Link to="/requests/$id" params={{ id: r.id }} className="hover:underline">
                       {r.reference}
                     </Link>
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <Link
                       to="/requests/$id"
                       params={{ id: r.id }}
@@ -235,19 +509,10 @@ function AuditPage() {
                       {r.title || "Untitled request"}
                     </Link>
                   </td>
-                  <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
-                    {unitName(r) || "—"}
-                  </td>
-                  <td className="hidden px-4 py-3 sm:table-cell">{formatDate(r.submittedAt)}</td>
-                  <td className="px-4 py-3">
+                  <td className="text-muted-foreground">{unitName(r) || "—"}</td>
+                  <td className="text-muted-foreground">{formatDate(r.submittedAt)}</td>
+                  <td>
                     <StatusBadge status={r.status} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link to="/requests/$id" params={{ id: r.id }}>
-                        Details
-                      </Link>
-                    </Button>
                   </td>
                 </tr>
               ))
@@ -255,20 +520,6 @@ function AuditPage() {
           </tbody>
         </table>
       </div>
-
-      <p className="text-xs text-muted-foreground">
-        Audit exports include decision notes and timestamps for institutional record-keeping.
-        Configuration changes are logged in Admin → Audit log.
-      </p>
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="surface p-5">
-      <p className="label-caps">{label}</p>
-      <p className="mt-1 font-display text-3xl">{value}</p>
     </div>
   );
 }

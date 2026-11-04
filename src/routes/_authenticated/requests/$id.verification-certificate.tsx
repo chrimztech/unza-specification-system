@@ -5,7 +5,14 @@ import type { RequestResponse, VerificationResponse } from "@/lib/api-types";
 import { unitName } from "@/lib/requests";
 import { formatDateTime } from "@/lib/domain";
 import { Button } from "@/components/ui/button";
-import { Letterhead, LetterheadMeta, PrintSheet, SignatureBlock } from "@/components/Letterhead";
+import {
+  Letterhead,
+  LetterheadMeta,
+  PrintSheet,
+  SignatureBlock,
+  DocumentFooter,
+  PrintToolbar,
+} from "@/components/Letterhead";
 
 export const Route = createFileRoute("/_authenticated/requests/$id/verification-certificate")({
   head: () => ({
@@ -52,14 +59,13 @@ function VerificationCertificate() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-2 print:hidden">
-        <Button onClick={() => window.print()}>Print / save as PDF</Button>
+      <PrintToolbar document="Installation Verification Certificate" reference={r.reference}>
         <Button asChild variant="outline">
           <Link to="/requests/$id" params={{ id }}>
             Back to request
           </Link>
         </Button>
-      </div>
+      </PrintToolbar>
 
       <PrintSheet>
         <Letterhead
@@ -117,6 +123,7 @@ function VerificationCertificate() {
         </section>
 
         <SignatureBlock roles={["CICT Support", "Requesting Unit Representative"]} />
+        <DocumentFooter />
       </PrintSheet>
     </div>
   );

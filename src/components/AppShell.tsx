@@ -61,7 +61,7 @@ const PAGE_TITLES: Partial<Record<AppPath | "/profile" | "/notifications", strin
   "/procurement": "Procurement",
   "/stores": "Stores",
   "/verification": "Equipment verification",
-  "/audit": "Audit workspace",
+  "/audit": "Audit log",
   "/admin": "System administration",
   "/profile": "My profile",
   "/notifications": "Notifications",
@@ -117,11 +117,14 @@ export function AppShell({ children }: { children: ReactNode }) {
               { to: "/standards", label: "Standards", icon: BookOpenCheck },
             ] as NavItem[])
           : []),
-        ...(hasRole("procurement")
+        // Administrators can act at every stage (the backend allows it), so they see these too.
+        ...(hasRole("procurement") || hasRole("admin")
           ? [{ to: "/procurement", label: "Procurement", icon: Boxes } as NavItem]
           : []),
-        ...(hasRole("stores") ? [{ to: "/stores", label: "Stores", icon: Store } as NavItem] : []),
-        ...(hasRole("cict_support")
+        ...(hasRole("stores") || hasRole("admin")
+          ? [{ to: "/stores", label: "Stores", icon: Store } as NavItem]
+          : []),
+        ...(hasRole("cict_support") || hasRole("admin")
           ? [{ to: "/verification", label: "Verification", icon: PackageCheck } as NavItem]
           : []),
       ],
@@ -135,7 +138,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               { to: "/directory", label: "Directory", icon: UsersRound },
             ] as NavItem[])
           : []),
-        ...(hasRole("auditor")
+        ...(hasRole("auditor") || hasRole("admin")
           ? [{ to: "/audit", label: "Audit log", icon: ShieldCheck } as NavItem]
           : []),
         ...(hasRole("admin")
@@ -267,7 +270,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background">
       <a
         href="#main-content"
-        className="fixed left-3 top-3 z-[70] -translate-y-20 rounded-lg bg-card px-4 py-2 text-sm font-semibold shadow-lift focus:translate-y-0"
+        className="fixed left-3 top-3 z-[70] -translate-y-20 print:hidden rounded-lg bg-card px-4 py-2 text-sm font-semibold shadow-lift focus:translate-y-0"
       >
         Skip to content
       </a>

@@ -28,9 +28,12 @@ import { Route as AuthenticatedReviewsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedStandardsRouteImport } from './routes/_authenticated/standards'
 import { Route as AuthenticatedStoresRouteImport } from './routes/_authenticated/stores'
 import { Route as AuthenticatedVerificationRouteImport } from './routes/_authenticated/verification'
+import { Route as AuthenticatedAuditPrintRouteImport } from './routes/_authenticated/audit_.print'
+import { Route as AuthenticatedReportsPrintRouteImport } from './routes/_authenticated/reports_.print'
 import { Route as AuthenticatedRequestsIndexRouteImport } from './routes/_authenticated/requests/index'
-import { Route as AuthenticatedRequestsIdRouteImport } from './routes/_authenticated/requests/$id'
 import { Route as AuthenticatedRequestsNewRouteImport } from './routes/_authenticated/requests/new'
+import { Route as AuthenticatedRequestsRegisterRouteImport } from './routes/_authenticated/requests/register'
+import { Route as AuthenticatedRequestsIdIndexRouteImport } from './routes/_authenticated/requests/$id.index'
 import { Route as AuthenticatedRequestsIdEditRouteImport } from './routes/_authenticated/requests/$id.edit'
 import { Route as AuthenticatedRequestsIdPrintRouteImport } from './routes/_authenticated/requests/$id.print'
 import { Route as AuthenticatedRequestsIdPurchaseOrderRouteImport } from './routes/_authenticated/requests/$id.purchase-order'
@@ -135,58 +138,76 @@ const AuthenticatedVerificationRoute =
     path: '/verification',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAuditPrintRoute = AuthenticatedAuditPrintRouteImport.update({
+  id: '/audit_/print',
+  path: '/audit/print',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedReportsPrintRoute =
+  AuthenticatedReportsPrintRouteImport.update({
+    id: '/reports_/print',
+    path: '/reports/print',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedRequestsIndexRoute =
   AuthenticatedRequestsIndexRouteImport.update({
     id: '/requests/',
     path: '/requests/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedRequestsIdRoute = AuthenticatedRequestsIdRouteImport.update({
-  id: '/requests/$id',
-  path: '/requests/$id',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedRequestsNewRoute =
   AuthenticatedRequestsNewRouteImport.update({
     id: '/requests/new',
     path: '/requests/new',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedRequestsRegisterRoute =
+  AuthenticatedRequestsRegisterRouteImport.update({
+    id: '/requests/register',
+    path: '/requests/register',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedRequestsIdIndexRoute =
+  AuthenticatedRequestsIdIndexRouteImport.update({
+    id: '/requests/$id/',
+    path: '/requests/$id/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedRequestsIdEditRoute =
   AuthenticatedRequestsIdEditRouteImport.update({
-    id: '/edit',
-    path: '/edit',
-    getParentRoute: () => AuthenticatedRequestsIdRoute,
+    id: '/requests/$id/edit',
+    path: '/requests/$id/edit',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedRequestsIdPrintRoute =
   AuthenticatedRequestsIdPrintRouteImport.update({
-    id: '/print',
-    path: '/print',
-    getParentRoute: () => AuthenticatedRequestsIdRoute,
+    id: '/requests/$id/print',
+    path: '/requests/$id/print',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedRequestsIdPurchaseOrderRoute =
   AuthenticatedRequestsIdPurchaseOrderRouteImport.update({
-    id: '/purchase-order',
-    path: '/purchase-order',
-    getParentRoute: () => AuthenticatedRequestsIdRoute,
+    id: '/requests/$id/purchase-order',
+    path: '/requests/$id/purchase-order',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedRequestsIdSpecSheetRoute =
   AuthenticatedRequestsIdSpecSheetRouteImport.update({
-    id: '/spec-sheet',
-    path: '/spec-sheet',
-    getParentRoute: () => AuthenticatedRequestsIdRoute,
+    id: '/requests/$id/spec-sheet',
+    path: '/requests/$id/spec-sheet',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedRequestsIdStoresReceiptRoute =
   AuthenticatedRequestsIdStoresReceiptRouteImport.update({
-    id: '/stores-receipt',
-    path: '/stores-receipt',
-    getParentRoute: () => AuthenticatedRequestsIdRoute,
+    id: '/requests/$id/stores-receipt',
+    path: '/requests/$id/stores-receipt',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedRequestsIdVerificationCertificateRoute =
   AuthenticatedRequestsIdVerificationCertificateRouteImport.update({
-    id: '/verification-certificate',
-    path: '/verification-certificate',
-    getParentRoute: () => AuthenticatedRequestsIdRoute,
+    id: '/requests/$id/verification-certificate',
+    path: '/requests/$id/verification-certificate',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -208,8 +229,10 @@ export interface FileRoutesByFullPath {
   '/standards': typeof AuthenticatedStandardsRoute
   '/stores': typeof AuthenticatedStoresRoute
   '/verification': typeof AuthenticatedVerificationRoute
-  '/requests/$id': typeof AuthenticatedRequestsIdRouteWithChildren
+  '/audit/print': typeof AuthenticatedAuditPrintRoute
+  '/reports/print': typeof AuthenticatedReportsPrintRoute
   '/requests/new': typeof AuthenticatedRequestsNewRoute
+  '/requests/register': typeof AuthenticatedRequestsRegisterRoute
   '/requests/': typeof AuthenticatedRequestsIndexRoute
   '/requests/$id/edit': typeof AuthenticatedRequestsIdEditRoute
   '/requests/$id/print': typeof AuthenticatedRequestsIdPrintRoute
@@ -217,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/requests/$id/spec-sheet': typeof AuthenticatedRequestsIdSpecSheetRoute
   '/requests/$id/stores-receipt': typeof AuthenticatedRequestsIdStoresReceiptRoute
   '/requests/$id/verification-certificate': typeof AuthenticatedRequestsIdVerificationCertificateRoute
+  '/requests/$id/': typeof AuthenticatedRequestsIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -237,8 +261,10 @@ export interface FileRoutesByTo {
   '/standards': typeof AuthenticatedStandardsRoute
   '/stores': typeof AuthenticatedStoresRoute
   '/verification': typeof AuthenticatedVerificationRoute
-  '/requests/$id': typeof AuthenticatedRequestsIdRouteWithChildren
+  '/audit/print': typeof AuthenticatedAuditPrintRoute
+  '/reports/print': typeof AuthenticatedReportsPrintRoute
   '/requests/new': typeof AuthenticatedRequestsNewRoute
+  '/requests/register': typeof AuthenticatedRequestsRegisterRoute
   '/requests': typeof AuthenticatedRequestsIndexRoute
   '/requests/$id/edit': typeof AuthenticatedRequestsIdEditRoute
   '/requests/$id/print': typeof AuthenticatedRequestsIdPrintRoute
@@ -246,6 +272,7 @@ export interface FileRoutesByTo {
   '/requests/$id/spec-sheet': typeof AuthenticatedRequestsIdSpecSheetRoute
   '/requests/$id/stores-receipt': typeof AuthenticatedRequestsIdStoresReceiptRoute
   '/requests/$id/verification-certificate': typeof AuthenticatedRequestsIdVerificationCertificateRoute
+  '/requests/$id': typeof AuthenticatedRequestsIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -268,8 +295,10 @@ export interface FileRoutesById {
   '/_authenticated/standards': typeof AuthenticatedStandardsRoute
   '/_authenticated/stores': typeof AuthenticatedStoresRoute
   '/_authenticated/verification': typeof AuthenticatedVerificationRoute
-  '/_authenticated/requests/$id': typeof AuthenticatedRequestsIdRouteWithChildren
+  '/_authenticated/audit_/print': typeof AuthenticatedAuditPrintRoute
+  '/_authenticated/reports_/print': typeof AuthenticatedReportsPrintRoute
   '/_authenticated/requests/new': typeof AuthenticatedRequestsNewRoute
+  '/_authenticated/requests/register': typeof AuthenticatedRequestsRegisterRoute
   '/_authenticated/requests/': typeof AuthenticatedRequestsIndexRoute
   '/_authenticated/requests/$id/edit': typeof AuthenticatedRequestsIdEditRoute
   '/_authenticated/requests/$id/print': typeof AuthenticatedRequestsIdPrintRoute
@@ -277,6 +306,7 @@ export interface FileRoutesById {
   '/_authenticated/requests/$id/spec-sheet': typeof AuthenticatedRequestsIdSpecSheetRoute
   '/_authenticated/requests/$id/stores-receipt': typeof AuthenticatedRequestsIdStoresReceiptRoute
   '/_authenticated/requests/$id/verification-certificate': typeof AuthenticatedRequestsIdVerificationCertificateRoute
+  '/_authenticated/requests/$id/': typeof AuthenticatedRequestsIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -299,8 +329,10 @@ export interface FileRouteTypes {
     | '/standards'
     | '/stores'
     | '/verification'
-    | '/requests/$id'
+    | '/audit/print'
+    | '/reports/print'
     | '/requests/new'
+    | '/requests/register'
     | '/requests/'
     | '/requests/$id/edit'
     | '/requests/$id/print'
@@ -308,6 +340,7 @@ export interface FileRouteTypes {
     | '/requests/$id/spec-sheet'
     | '/requests/$id/stores-receipt'
     | '/requests/$id/verification-certificate'
+    | '/requests/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -328,8 +361,10 @@ export interface FileRouteTypes {
     | '/standards'
     | '/stores'
     | '/verification'
-    | '/requests/$id'
+    | '/audit/print'
+    | '/reports/print'
     | '/requests/new'
+    | '/requests/register'
     | '/requests'
     | '/requests/$id/edit'
     | '/requests/$id/print'
@@ -337,6 +372,7 @@ export interface FileRouteTypes {
     | '/requests/$id/spec-sheet'
     | '/requests/$id/stores-receipt'
     | '/requests/$id/verification-certificate'
+    | '/requests/$id'
   id:
     | '__root__'
     | '/'
@@ -358,8 +394,10 @@ export interface FileRouteTypes {
     | '/_authenticated/standards'
     | '/_authenticated/stores'
     | '/_authenticated/verification'
-    | '/_authenticated/requests/$id'
+    | '/_authenticated/audit_/print'
+    | '/_authenticated/reports_/print'
     | '/_authenticated/requests/new'
+    | '/_authenticated/requests/register'
     | '/_authenticated/requests/'
     | '/_authenticated/requests/$id/edit'
     | '/_authenticated/requests/$id/print'
@@ -367,6 +405,7 @@ export interface FileRouteTypes {
     | '/_authenticated/requests/$id/spec-sheet'
     | '/_authenticated/requests/$id/stores-receipt'
     | '/_authenticated/requests/$id/verification-certificate'
+    | '/_authenticated/requests/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -512,18 +551,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVerificationRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/audit_/print': {
+      id: '/_authenticated/audit_/print'
+      path: '/audit/print'
+      fullPath: '/audit/print'
+      preLoaderRoute: typeof AuthenticatedAuditPrintRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/reports_/print': {
+      id: '/_authenticated/reports_/print'
+      path: '/reports/print'
+      fullPath: '/reports/print'
+      preLoaderRoute: typeof AuthenticatedReportsPrintRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/requests/': {
       id: '/_authenticated/requests/'
       path: '/requests'
       fullPath: '/requests/'
       preLoaderRoute: typeof AuthenticatedRequestsIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/requests/$id': {
-      id: '/_authenticated/requests/$id'
-      path: '/requests/$id'
-      fullPath: '/requests/$id'
-      preLoaderRoute: typeof AuthenticatedRequestsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/requests/new': {
@@ -533,78 +579,64 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRequestsNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/requests/register': {
+      id: '/_authenticated/requests/register'
+      path: '/requests/register'
+      fullPath: '/requests/register'
+      preLoaderRoute: typeof AuthenticatedRequestsRegisterRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/requests/$id/': {
+      id: '/_authenticated/requests/$id/'
+      path: '/requests/$id'
+      fullPath: '/requests/$id/'
+      preLoaderRoute: typeof AuthenticatedRequestsIdIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/requests/$id/edit': {
       id: '/_authenticated/requests/$id/edit'
-      path: '/edit'
+      path: '/requests/$id/edit'
       fullPath: '/requests/$id/edit'
       preLoaderRoute: typeof AuthenticatedRequestsIdEditRouteImport
-      parentRoute: typeof AuthenticatedRequestsIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/requests/$id/print': {
       id: '/_authenticated/requests/$id/print'
-      path: '/print'
+      path: '/requests/$id/print'
       fullPath: '/requests/$id/print'
       preLoaderRoute: typeof AuthenticatedRequestsIdPrintRouteImport
-      parentRoute: typeof AuthenticatedRequestsIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/requests/$id/purchase-order': {
       id: '/_authenticated/requests/$id/purchase-order'
-      path: '/purchase-order'
+      path: '/requests/$id/purchase-order'
       fullPath: '/requests/$id/purchase-order'
       preLoaderRoute: typeof AuthenticatedRequestsIdPurchaseOrderRouteImport
-      parentRoute: typeof AuthenticatedRequestsIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/requests/$id/spec-sheet': {
       id: '/_authenticated/requests/$id/spec-sheet'
-      path: '/spec-sheet'
+      path: '/requests/$id/spec-sheet'
       fullPath: '/requests/$id/spec-sheet'
       preLoaderRoute: typeof AuthenticatedRequestsIdSpecSheetRouteImport
-      parentRoute: typeof AuthenticatedRequestsIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/requests/$id/stores-receipt': {
       id: '/_authenticated/requests/$id/stores-receipt'
-      path: '/stores-receipt'
+      path: '/requests/$id/stores-receipt'
       fullPath: '/requests/$id/stores-receipt'
       preLoaderRoute: typeof AuthenticatedRequestsIdStoresReceiptRouteImport
-      parentRoute: typeof AuthenticatedRequestsIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/requests/$id/verification-certificate': {
       id: '/_authenticated/requests/$id/verification-certificate'
-      path: '/verification-certificate'
+      path: '/requests/$id/verification-certificate'
       fullPath: '/requests/$id/verification-certificate'
       preLoaderRoute: typeof AuthenticatedRequestsIdVerificationCertificateRouteImport
-      parentRoute: typeof AuthenticatedRequestsIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
-
-interface AuthenticatedRequestsIdRouteChildren {
-  AuthenticatedRequestsIdEditRoute: typeof AuthenticatedRequestsIdEditRoute
-  AuthenticatedRequestsIdPrintRoute: typeof AuthenticatedRequestsIdPrintRoute
-  AuthenticatedRequestsIdPurchaseOrderRoute: typeof AuthenticatedRequestsIdPurchaseOrderRoute
-  AuthenticatedRequestsIdSpecSheetRoute: typeof AuthenticatedRequestsIdSpecSheetRoute
-  AuthenticatedRequestsIdStoresReceiptRoute: typeof AuthenticatedRequestsIdStoresReceiptRoute
-  AuthenticatedRequestsIdVerificationCertificateRoute: typeof AuthenticatedRequestsIdVerificationCertificateRoute
-}
-
-const AuthenticatedRequestsIdRouteChildren: AuthenticatedRequestsIdRouteChildren =
-  {
-    AuthenticatedRequestsIdEditRoute: AuthenticatedRequestsIdEditRoute,
-    AuthenticatedRequestsIdPrintRoute: AuthenticatedRequestsIdPrintRoute,
-    AuthenticatedRequestsIdPurchaseOrderRoute:
-      AuthenticatedRequestsIdPurchaseOrderRoute,
-    AuthenticatedRequestsIdSpecSheetRoute:
-      AuthenticatedRequestsIdSpecSheetRoute,
-    AuthenticatedRequestsIdStoresReceiptRoute:
-      AuthenticatedRequestsIdStoresReceiptRoute,
-    AuthenticatedRequestsIdVerificationCertificateRoute:
-      AuthenticatedRequestsIdVerificationCertificateRoute,
-  }
-
-const AuthenticatedRequestsIdRouteWithChildren =
-  AuthenticatedRequestsIdRoute._addFileChildren(
-    AuthenticatedRequestsIdRouteChildren,
-  )
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
@@ -621,9 +653,18 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedStandardsRoute: typeof AuthenticatedStandardsRoute
   AuthenticatedStoresRoute: typeof AuthenticatedStoresRoute
   AuthenticatedVerificationRoute: typeof AuthenticatedVerificationRoute
-  AuthenticatedRequestsIdRoute: typeof AuthenticatedRequestsIdRouteWithChildren
+  AuthenticatedAuditPrintRoute: typeof AuthenticatedAuditPrintRoute
+  AuthenticatedReportsPrintRoute: typeof AuthenticatedReportsPrintRoute
   AuthenticatedRequestsNewRoute: typeof AuthenticatedRequestsNewRoute
+  AuthenticatedRequestsRegisterRoute: typeof AuthenticatedRequestsRegisterRoute
   AuthenticatedRequestsIndexRoute: typeof AuthenticatedRequestsIndexRoute
+  AuthenticatedRequestsIdEditRoute: typeof AuthenticatedRequestsIdEditRoute
+  AuthenticatedRequestsIdPrintRoute: typeof AuthenticatedRequestsIdPrintRoute
+  AuthenticatedRequestsIdPurchaseOrderRoute: typeof AuthenticatedRequestsIdPurchaseOrderRoute
+  AuthenticatedRequestsIdSpecSheetRoute: typeof AuthenticatedRequestsIdSpecSheetRoute
+  AuthenticatedRequestsIdStoresReceiptRoute: typeof AuthenticatedRequestsIdStoresReceiptRoute
+  AuthenticatedRequestsIdVerificationCertificateRoute: typeof AuthenticatedRequestsIdVerificationCertificateRoute
+  AuthenticatedRequestsIdIndexRoute: typeof AuthenticatedRequestsIdIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -641,9 +682,21 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedStandardsRoute: AuthenticatedStandardsRoute,
   AuthenticatedStoresRoute: AuthenticatedStoresRoute,
   AuthenticatedVerificationRoute: AuthenticatedVerificationRoute,
-  AuthenticatedRequestsIdRoute: AuthenticatedRequestsIdRouteWithChildren,
+  AuthenticatedAuditPrintRoute: AuthenticatedAuditPrintRoute,
+  AuthenticatedReportsPrintRoute: AuthenticatedReportsPrintRoute,
   AuthenticatedRequestsNewRoute: AuthenticatedRequestsNewRoute,
+  AuthenticatedRequestsRegisterRoute: AuthenticatedRequestsRegisterRoute,
   AuthenticatedRequestsIndexRoute: AuthenticatedRequestsIndexRoute,
+  AuthenticatedRequestsIdEditRoute: AuthenticatedRequestsIdEditRoute,
+  AuthenticatedRequestsIdPrintRoute: AuthenticatedRequestsIdPrintRoute,
+  AuthenticatedRequestsIdPurchaseOrderRoute:
+    AuthenticatedRequestsIdPurchaseOrderRoute,
+  AuthenticatedRequestsIdSpecSheetRoute: AuthenticatedRequestsIdSpecSheetRoute,
+  AuthenticatedRequestsIdStoresReceiptRoute:
+    AuthenticatedRequestsIdStoresReceiptRoute,
+  AuthenticatedRequestsIdVerificationCertificateRoute:
+    AuthenticatedRequestsIdVerificationCertificateRoute,
+  AuthenticatedRequestsIdIndexRoute: AuthenticatedRequestsIdIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

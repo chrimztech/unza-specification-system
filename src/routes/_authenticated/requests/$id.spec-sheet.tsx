@@ -5,7 +5,14 @@ import type { RequestResponse } from "@/lib/api-types";
 import { unitName } from "@/lib/requests";
 import { formatDate, formatDateTime } from "@/lib/domain";
 import { Button } from "@/components/ui/button";
-import { Letterhead, LetterheadMeta, PrintSheet, SignatureBlock } from "@/components/Letterhead";
+import {
+  Letterhead,
+  LetterheadMeta,
+  PrintSheet,
+  SignatureBlock,
+  DocumentFooter,
+  PrintToolbar,
+} from "@/components/Letterhead";
 
 export const Route = createFileRoute("/_authenticated/requests/$id/spec-sheet")({
   head: () => ({
@@ -56,14 +63,13 @@ function SpecSheet() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-2 print:hidden">
-        <Button onClick={() => window.print()}>Print / save as PDF</Button>
+      <PrintToolbar document="Approved Equipment Specification Sheet" reference={r.reference}>
         <Button asChild variant="outline">
           <Link to="/requests/$id" params={{ id }}>
             Back to request
           </Link>
         </Button>
-      </div>
+      </PrintToolbar>
 
       <PrintSheet>
         <Letterhead
@@ -145,6 +151,7 @@ function SpecSheet() {
           authority to spend; procurement remains subject to budget approval and University
           procurement procedures.
         </div>
+        <DocumentFooter />
       </PrintSheet>
     </div>
   );

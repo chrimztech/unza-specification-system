@@ -25,6 +25,9 @@ public class AuditLog {
     @Column(name = "actor_email")
     private String actorEmail;
 
+    @Column(name = "actor_name")
+    private String actorName;
+
     @Column(name = "entity_type", nullable = false)
     private String entityType;
 
@@ -35,6 +38,9 @@ public class AuditLog {
     private String action;
 
     private String details;
+
+    @Column(name = "ip_address")
+    private String ipAddress;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default

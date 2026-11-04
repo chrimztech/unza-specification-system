@@ -6,7 +6,7 @@ from reportlab.lib import colors
 
 OUT, LOGO = sys.argv[1], sys.argv[2]
 d = Doc(OUT, "Technical\nDocumentation", "Equipment Specification & Request Management System",
-        "Technical Document", "1.1", "18 October 2026",
+        "Technical Document", "1.2", "4 November 2026",
         "CICT developers and system administrators", LOGO)
 
 # ------------------------------------------------------------------ front matter
@@ -29,8 +29,8 @@ d.bullets([
 d.h3("Document control")
 d.defs([
     ("Document", "Technical Documentation — UNZA CICT Equipment Specification & Request Management System"),
-    ("Version", "1.1"),
-    ("Date", "18 October 2026"),
+    ("Version", "1.2"),
+    ("Date", "4 November 2026"),
     ("Owner", "Centre for Information and Communications Technology (CICT), University of Zambia"),
     ("Code base", "Frontend: repository root (TanStack Start, React, TypeScript). Backend: `backend/` (Spring Boot, Java 17)."),
     ("Companion document", "User Manual (same system), which explains the system from each user's point of view."),
@@ -83,7 +83,7 @@ d.table(["Term", "Meaning"], [
     ("Position level", "The staff member's grade from HR (for example Lecturer, Dean). Used to recommend a tier."),
     ("Delegation", "A manager temporarily granting another staff member authority to approve on their behalf."),
     ("Request event", "An entry in a request's audit trail recording an action, its actor, the status change and any note."),
-    ("Audit log", "The system-wide log of administrative and procurement actions (separate from request events)."),
+    ("Audit log", "The system-wide, append-only activity trail: sign-ins, every request workflow step, procurement records, configuration and role changes, attachments and documents printed. Rows cannot be edited or deleted."),
     ("HR system", "The University's HR API (`hr.unza.zm`) used for sign-in and staff profile data."),
     ("JWT", "JSON Web Token: the signed session token the backend issues after sign-in."),
 ], [0.24, 0.76])
@@ -471,8 +471,19 @@ d.table(["Document", "Route", "Available from status"], [
     ("Stores receipt", "`/requests/{id}/stores-receipt`", "`in_stores` onwards"),
     ("Verification certificate", "`/requests/{id}/verification-certificate`", "`completed` or `return_required`"),
 ], [0.3, 0.4, 0.3])
-d.p("These are frontend pages rendered on the University letterhead (`Letterhead` component) with a Print "
-    "button that calls the browser's print dialog; users can print to paper or save as PDF.")
+d.p("These are frontend pages rendered on the University letterhead (`Letterhead` component). The shared "
+    "`PrintToolbar` records the print in the audit log (`POST /api/audit-log/document-export`) and opens the "
+    "browser's print dialog, where users print to paper or choose *Save as PDF*. Print styles in `styles.css` set "
+    "A4 pages, repeat table headings on every page, keep rows whole, and print the system name and "
+    "\"Page n of m\" in the bottom margin. Every document ends with a `DocumentFooter` naming who generated it and when.")
+d.h3("Reports and registers")
+d.table(["Document", "Route", "Who"], [
+    ("Request register (honours the Requests page filters)", "`/requests/register`", "Any (shows the requests visible to them)"),
+    ("Management report (optional date range)", "`/reports/print`", "Oversight roles"),
+    ("Audit trail report (honours the Audit log filters)", "`/audit/print`", "Auditor, admin"),
+], [0.45, 0.25, 0.3])
+d.p("The detail page is an index route (`requests/$id.index.tsx`) so that the edit page and the five documents, "
+    "which are routed under `/requests/{id}/`, render as their own pages.")
 
 # ------------------------------------------------------------------ 7 notifications
 d.h1("Notifications")
@@ -482,6 +493,9 @@ d.h2("Recipient rules")
 d.table(["New status", "Who is notified"], [
     ("`pending_manager`", "The nominated manager, plus everyone holding an active delegation from that manager."),
     ("`pending_cict`", "Every user with the `cict_reviewer` or `cict_manager` role."),
+    ("`approved`, `return_required`", "The requester and submitter, plus every user with the `procurement` role."),
+    ("`purchased`", "The requester and submitter, plus every user with the `stores` role."),
+    ("`in_stores`", "The requester and submitter, plus every user with the `cict_support` role."),
     ("Any other status", "The requester and the person who submitted the request (if different)."),
 ], [0.25, 0.75])
 d.p("Two filters always apply: duplicates are removed, and **the person who performed the action is never "
@@ -648,8 +662,9 @@ api = [
         ("POST", "/api/notifications/{id}/read", "Owner", "Mark one read."),
         ("POST", "/api/notifications/read-all", "Any", "Mark all own notifications read."),
         ("DELETE", "/api/notifications/{id}", "Owner", "Dismiss."),
-        ("GET", "/api/audit-log?limit=", "Auditor / admin", "Recent audit entries."),
-        ("DELETE", "/api/audit-log", "Admin", "Clear the audit log."),
+        ("GET", "/api/audit-log?from=&to=&actor=&entityType=&action=&q=&page=&size=", "Auditor / admin", "Search the audit trail, newest first; returns `{items, total, page, size}` (size up to 2000)."),
+        ("GET", "/api/audit-log/entity-types", "Auditor / admin", "Categories present in the log, for filtering."),
+        ("POST", "/api/audit-log/document-export", "Any", "Record that the caller printed or saved an official document."),
     ]),
 ]
 for group, rows in api:
@@ -816,14 +831,15 @@ d.code("INSERT INTO user_roles (id, user_id, role)\n"
 
 # ------------------------------------------------------------------ 13 testing
 d.h1("Testing")
-d.lead("The backend has 19 integration tests that boot the full application against a real PostgreSQL database and "
+d.lead("The backend has 25 integration tests that boot the full application against a real PostgreSQL database and "
        "drive it through the HTTP API, with only the HR system mocked.")
 d.h2("Test suites")
 d.table(["Class", "Tests", "What it proves"], [
     ("`AuthIntegrationTest`", "3", "Valid HR credentials issue a token; rejected credentials return 502; repeated failures lock the identifier out with 429."),
     ("`RequestLifecycleIntegrationTest`", "4", "Reference numbers are generated and unique; negative quantities are rejected; a request goes draft → manager → CICT → approved; a non-CICT user cannot approve the technical review."),
     ("`ProcurementPipelineIntegrationTest`", "4", "Happy path to `completed` with sequential EVAL/VERIFY references; failing evaluation needs a reason; a failed quotation cannot be purchased; needs-return loops back via restart."),
-    ("`NotificationIntegrationTest`", "4", "Each stage notifies the next person and never the actor; clarification and rejection reach the requester; an active delegate is notified and can approve; only the owner can read or dismiss a notification."),
+    ("`NotificationIntegrationTest`", "5", "Procurement, stores and CICT Support are told when work reaches their queue; each stage notifies the next person and never the actor; clarification and rejection reach the requester; an active delegate is notified and can approve; only the owner can read or dismiss a notification."),
+    ("`AuditLogIntegrationTest`", "5", "Sign-ins (successful and failed) are recorded with name and IP but never the password; workflow steps appear and filter by category; only auditors and admins can read the log and nobody can clear it; document prints are recorded; the database refuses UPDATE, DELETE and TRUNCATE."),
     ("`ErrorHandlingIntegrationTest`", "4", "Unknown endpoints return 404, a wrong HTTP method 405, malformed JSON 400 with a clear message, and a malformed id 400 — never a 500."),
 ], [0.33, 0.08, 0.59])
 d.h2("Running the tests")
@@ -858,12 +874,16 @@ d.code("cd backend/scripts\n"
        "./restore.ps1 -BackupPath 20261018-132333 -Force   # actually restore")
 d.bullets([
     "Each backup writes `backend/backups/<yyyyMMdd-HHmmss>/` with `database.dump` (pg_dump custom format), `attachments.zip` and `manifest.json`. The 14 most recent backups are kept.",
+    "`backup.ps1` reads the new dump back with `pg_restore --list` and fails loudly if it cannot; the manifest records how many tables hold data and the dump size.",
     "Restore is destructive and always a dry run unless `-Force` is given. Stop the backend before restoring.",
+    "The audit log is append-only, so a restore is the one operation that rewinds it. `restore.ps1` therefore writes a `database_restored` entry naming the backup and the Windows account that ran it; the entry is highlighted in the Audit log.",
     "To test a backup without touching live data, create a scratch database and run `./restore.ps1 -BackupPath <folder> -Database specification_restore_check -AttachmentsDir <scratch folder> -Force`, compare, then drop it.",
     "Backups are excluded from git. Copy them to durable storage (another disk, network share or cloud).",
 ])
-d.p("A full backup and a scratch restore were verified on 18 October 2026: the restored copy matched the live "
-    "database exactly (row counts and schema version) and the attachment files were recovered.")
+d.p("A full backup and a scratch restore were verified on 18 October 2026, and again on 4 November 2026 after "
+    "the audit log became append-only: an entry written after the backup was removed by the restore, both "
+    "protection triggers were recreated and still refused a DELETE, the schema stayed at V18, the attachment "
+    "files were recovered and the restore recorded itself in the audit log.")
 d.p("Schedule a daily backup with Windows Task Scheduler:")
 d.code('schtasks /create /tn "UNZA Spec System Backup" /sc daily /st 02:00 ^\n'
        '  /tr "powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\\path\\to\\backend\\scripts\\backup.ps1"')
@@ -871,7 +891,8 @@ d.h2("Monitoring and logs")
 d.bullets([
     "**Health:** `GET /actuator/health` returns `{\"status\":\"UP\"}` when the application and database are reachable.",
     "**Logs:** standard Spring Boot console output at INFO level for the application package. Unhandled errors are logged with a stack trace; data-integrity conflicts are logged as warnings.",
-    "**Audit:** administrative actions are visible to auditors and administrators in the Audit log screens and can be exported to CSV.",
+    "**Audit:** auditors and administrators search the activity trail on the Audit log page (filters for dates, category, user and free text, 50 entries a page), export it to CSV or print an Audit Trail Report. Each entry stores the user's id, email and name at the time, the client IP (first `X-Forwarded-For` value behind a proxy) and a timestamp.",
+    "**Tamper resistance:** migration V18 adds triggers that reject UPDATE, DELETE and TRUNCATE on `audit_log`; the only permitted change is `actor_id` becoming null when a user account is deleted. There is no API to clear the log.",
 ])
 d.h2("Troubleshooting")
 d.table(["Symptom", "Likely cause", "What to do"], [
@@ -965,6 +986,8 @@ d.table(["Version", "Purpose"], [
     ("V11", "Item number of users; evaluable catalogue fields."), ("V12", "Designation of intended user."),
     ("V13", "Expanded designation list."), ("V14", "Per-item designation."),
     ("V15", "Allow hard deletion of users."), ("V16", "Quotation attachment (vendor quote document)."),
+    ("V17", "Sign-in help text setting (blank = hidden)."),
+    ("V18", "Append-only audit log: actor name and IP columns, request history copied in, update/delete/truncate triggers."),
 ], [0.15, 0.85])
 
 d.build()

@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useRequests, unitName } from "@/lib/requests";
+import { compact, downloadCsv, filterRequests, useRequests, unitName } from "@/lib/requests";
 import { StatusBadge } from "@/components/StatusBadge";
 import { QueryError } from "@/components/QueryError";
 import { STATUS_LABEL, formatDate, type RequestStatus } from "@/lib/domain";
 import { Button } from "@/components/ui/button";
+import { Download, Printer } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -43,47 +44,39 @@ function RequestsIndex() {
   const [scope, setScope] = useState("all");
   const [search, setSearch] = useState("");
 
-  const rows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return [...(requests.data ?? [])]
-      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
-      .filter((r) => {
-        if (status !== "all" && r.status !== status) return false;
-        if (scope === "mine" && r.requester.id !== userId && r.submittedBy.id !== userId)
-          return false;
-        if (scope === "approvals" && r.manager?.id !== userId) return false;
-        if (q && !`${r.reference} ${r.title ?? ""} ${unitName(r) ?? ""}`.toLowerCase().includes(q))
-          return false;
-        return true;
-      });
-  }, [requests.data, status, scope, search, userId]);
+  const rows = useMemo(
+    () => filterRequests(requests.data ?? [], { status, scope, q: search }, userId),
+    [requests.data, status, scope, search, userId],
+  );
 
   function exportCsv() {
-    const header = ["Reference", "Title", "Unit", "Status", "Priority", "Raised", "Required by"];
-    const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
-    const lines = [
-      header.join(","),
-      ...rows.map((r) =>
-        [
-          r.reference,
-          r.title || "Untitled request",
-          unitName(r) || "",
-          STATUS_LABEL[r.status],
-          r.priority ?? "",
-          formatDate(r.createdAt),
-          formatDate(r.requiredBy),
-        ]
-          .map((v) => escape(String(v ?? "")))
-          .join(","),
-      ),
-    ];
-    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `unza-cict-requests-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(
+      `unza-cict-requests-${new Date().toISOString().slice(0, 10)}.csv`,
+      [
+        "Reference",
+        "Title",
+        "Unit",
+        "Department",
+        "Requester",
+        "Status",
+        "Priority",
+        "Raised",
+        "Submitted",
+        "Required by",
+      ],
+      rows.map((r) => [
+        r.reference,
+        r.title || "Untitled request",
+        unitName(r) || "",
+        r.department || "",
+        r.requester.fullName,
+        STATUS_LABEL[r.status],
+        r.priority ?? "",
+        formatDate(r.createdAt),
+        formatDate(r.submittedAt),
+        formatDate(r.requiredBy),
+      ]),
+    );
   }
 
   return (
@@ -100,7 +93,21 @@ function RequestsIndex() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={exportCsv} disabled={rows.length === 0}>
+            <Download />
             Export CSV
+          </Button>
+          <Button asChild variant="outline">
+            <Link
+              to="/requests/register"
+              search={compact({
+                status: status === "all" ? undefined : status,
+                scope: scope === "all" ? undefined : scope,
+                q: search.trim() || undefined,
+              })}
+            >
+              <Printer />
+              Print register
+            </Link>
           </Button>
           <Button asChild>
             <Link to="/requests/new">New request</Link>

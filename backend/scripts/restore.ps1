@@ -47,6 +47,7 @@ function Assert-CommandExists([string]$Name) {
   }
 }
 Assert-CommandExists "pg_restore"
+Assert-CommandExists "psql"
 
 if ([string]::IsNullOrWhiteSpace($BackupPath)) {
   $latest = Get-ChildItem -Path $BackupRoot -Directory -ErrorAction SilentlyContinue |
@@ -75,6 +76,11 @@ if (Test-Path $attachmentsZip) {
   Write-Output "  No attachments.zip in this backup - attachments directory will be left untouched."
 }
 
+Write-Output ""
+Write-Output "  Stop the backend before restoring, and start it again afterwards."
+Write-Output "  Anything recorded after this backup was taken (requests, audit entries) will be lost;"
+Write-Output "  the restore itself is written to the audit log so that gap is on record."
+
 if (-not $Force) {
   Write-Output ""
   Write-Output "Dry run only - no changes made. Re-run with -Force to actually restore."
@@ -87,6 +93,13 @@ try {
   & pg_restore --host=$PgHost --port=$PgPort --username=$PgUser --dbname=$Database `
     --clean --if-exists --no-owner $dumpFile
   if ($LASTEXITCODE -ne 0) { throw "pg_restore exited with code $LASTEXITCODE" }
+
+  # The audit log is append-only, so a restore is the one event that rewinds it: record it.
+  $backupName = (Split-Path $resolvedPath -Leaf) -replace "'", "''"
+  $who = ("$env:USERDOMAIN\$env:USERNAME on $env:COMPUTERNAME") -replace "'", "''"
+  $sql = "INSERT INTO audit_log (actor_email, entity_type, action, details) VALUES ('$who', 'Database', 'database_restored', 'Database restored from backup $backupName; anything recorded after that backup was replaced.')"
+  & psql --host=$PgHost --port=$PgPort --username=$PgUser --dbname=$Database --quiet --command $sql
+  if ($LASTEXITCODE -ne 0) { Write-Warning "Restore succeeded but could not be recorded in the audit log." }
 } finally {
   Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue
 }

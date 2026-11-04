@@ -5,7 +5,14 @@ import type { PurchaseResponse, RequestResponse, StoresReceiptResponse } from "@
 import { unitName } from "@/lib/requests";
 import { formatDateTime } from "@/lib/domain";
 import { Button } from "@/components/ui/button";
-import { Letterhead, LetterheadMeta, PrintSheet, SignatureBlock } from "@/components/Letterhead";
+import {
+  Letterhead,
+  LetterheadMeta,
+  PrintSheet,
+  SignatureBlock,
+  DocumentFooter,
+  PrintToolbar,
+} from "@/components/Letterhead";
 
 export const Route = createFileRoute("/_authenticated/requests/$id/stores-receipt")({
   head: () => ({
@@ -57,14 +64,13 @@ function StoresReceiptDoc() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-2 print:hidden">
-        <Button onClick={() => window.print()}>Print / save as PDF</Button>
+      <PrintToolbar document="Goods Received Note" reference={r.reference}>
         <Button asChild variant="outline">
           <Link to="/requests/$id" params={{ id }}>
             Back to request
           </Link>
         </Button>
-      </div>
+      </PrintToolbar>
 
       <PrintSheet>
         <Letterhead documentTitle="Goods Received Note" reference={r.reference} />
@@ -120,6 +126,7 @@ function StoresReceiptDoc() {
         </section>
 
         <SignatureBlock roles={["Stores Officer", "Requesting Unit Representative"]} />
+        <DocumentFooter />
       </PrintSheet>
     </div>
   );

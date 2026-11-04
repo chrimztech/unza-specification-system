@@ -1,11 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api-client";
-import type { RequestResponse } from "@/lib/api-types";
+import type { RequestEventResponse, RequestResponse } from "@/lib/api-types";
 import { unitName } from "@/lib/requests";
-import { formatDate } from "@/lib/domain";
+import { STATUS_LABEL, formatDate, formatDateTime, type RequestStatus } from "@/lib/domain";
 import { Button } from "@/components/ui/button";
-import { Letterhead, LetterheadMeta, PrintSheet, SignatureBlock } from "@/components/Letterhead";
+import {
+  DocumentFooter,
+  DocumentSection,
+  DocumentTable,
+  Letterhead,
+  LetterheadMeta,
+  PrintSheet,
+  PrintToolbar,
+  SignatureBlock,
+} from "@/components/Letterhead";
 
 export const Route = createFileRoute("/_authenticated/requests/$id/print")({
   head: () => ({
@@ -27,6 +36,11 @@ function PrintRequestForm() {
     queryKey: ["request", id],
     queryFn: () => apiGet<RequestResponse>(`/api/requests/${id}`),
   });
+  const events = useQuery({
+    queryKey: ["request-events", id],
+    queryFn: () => apiGet<RequestEventResponse[]>(`/api/requests/${id}/events`),
+  });
+  const history = [...(events.data ?? [])].sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
 
   const r = request.data;
   if (request.isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
@@ -35,14 +49,13 @@ function PrintRequestForm() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-2 print:hidden">
-        <Button onClick={() => window.print()}>Print / save as PDF</Button>
+      <PrintToolbar document="ICT Equipment Specification Request" reference={r.reference}>
         <Button asChild variant="outline">
           <Link to="/requests/$id" params={{ id }}>
             Back to request
           </Link>
         </Button>
-      </div>
+      </PrintToolbar>
 
       <PrintSheet>
         <Letterhead documentTitle="ICT Equipment Specification Request" reference={r.reference} />
@@ -58,7 +71,7 @@ function PrintRequestForm() {
               r.onBehalfOf ? r.onBehalfOf.fullName : r.requestedFor || "Requester (self)",
             ],
             ["Date", formatDate(r.createdAt)],
-            ["Status", r.status.replace(/_/g, " ")],
+            ["Status", STATUS_LABEL[r.status]],
             ["Approving manager", r.manager?.fullName],
           ]}
         />
@@ -138,7 +151,42 @@ function PrintRequestForm() {
           </div>
         </section>
 
+        <DocumentSection title="Approval record">
+          <DocumentTable
+            headers={["Stage", "Decided by", "Date", "Note"]}
+            rows={[
+              [
+                "Manager approval",
+                r.manager?.fullName ?? "—",
+                formatDateTime(r.managerDecidedAt),
+                r.managerDecisionNote || "—",
+              ],
+              [
+                "CICT technical review",
+                r.cictDecidedBy?.fullName ?? "—",
+                formatDateTime(r.cictDecidedAt),
+                r.cictDecisionNote || "—",
+              ],
+            ]}
+          />
+        </DocumentSection>
+
+        <DocumentSection title="Workflow history">
+          <DocumentTable
+            headers={["Date & time", "By", "Action", "Status", "Comment"]}
+            empty="No workflow activity recorded."
+            rows={history.map((e) => [
+              <span className="whitespace-nowrap">{formatDateTime(e.createdAt)}</span>,
+              e.actorName || "System",
+              e.action.replace(/_/g, " "),
+              e.toStatus ? (STATUS_LABEL[e.toStatus as RequestStatus] ?? e.toStatus) : "—",
+              e.comment || "—",
+            ])}
+          />
+        </DocumentSection>
+
         <SignatureBlock roles={["Requester", "Approving Manager", "CICT Technical Reviewer"]} />
+        <DocumentFooter />
       </PrintSheet>
     </div>
   );

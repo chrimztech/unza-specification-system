@@ -1,7 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { Download, Printer } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useRequests, unitName } from "@/lib/requests";
+import { compact, downloadCsv, useRequests, unitName } from "@/lib/requests";
+import { computeReport, formatDays } from "@/lib/report-data";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { STATUS_LABEL, type RequestStatus, formatDate } from "@/lib/domain";
 import { StatusBadge } from "@/components/StatusBadge";
 import { QueryError } from "@/components/QueryError";
@@ -59,53 +64,40 @@ function Bars({ data }: { data: [string, number][] }) {
 function ReportsPage() {
   const { isOversight } = useAuth();
   const requests = useRequests();
-
-  const rows = useMemo(
-    () => [...(requests.data ?? [])].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
-    [requests.data],
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const report = useMemo(
+    () => computeReport(requests.data ?? [], from || undefined, to || undefined),
+    [requests.data, from, to],
   );
 
-  const byStatus = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const r of rows) counts.set(r.status, (counts.get(r.status) ?? 0) + 1);
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]);
-  }, [rows]);
-
-  const byUnit = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const r of rows) {
-      const key = unitName(r)?.trim() || "Unassigned unit";
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-    }
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
-  }, [rows]);
-
-  const byPriority = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const r of rows) {
-      const key = r.priority || "normal";
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-    }
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]);
-  }, [rows]);
-
-  const turnaround = useMemo(() => {
-    const done = rows.filter((r) => r.submittedAt && r.cictDecidedAt);
-    if (done.length === 0) return null;
-    const days =
-      done.reduce(
-        (sum, r) =>
-          sum +
-          (new Date(r.cictDecidedAt!).getTime() - new Date(r.submittedAt!).getTime()) / 86_400_000,
-        0,
-      ) / done.length;
-    return { days, count: done.length };
-  }, [rows]);
-
-  const openCount = rows.filter((r) =>
-    ["pending_manager", "pending_cict", "needs_clarification"].includes(r.status),
-  ).length;
-  const approved = rows.filter((r) => r.status === "approved").length;
+  function exportCsv() {
+    downloadCsv(
+      `unza-cict-report-${new Date().toISOString().slice(0, 10)}.csv`,
+      [
+        "Reference",
+        "Title",
+        "Unit",
+        "Status",
+        "Priority",
+        "Raised",
+        "Submitted",
+        "Manager decided",
+        "CICT decided",
+      ],
+      report.rows.map((r) => [
+        r.reference,
+        r.title || "Untitled request",
+        unitName(r) || "",
+        STATUS_LABEL[r.status],
+        r.priority || "normal",
+        formatDate(r.createdAt),
+        formatDate(r.submittedAt),
+        formatDate(r.managerDecidedAt),
+        formatDate(r.cictDecidedAt),
+      ]),
+    );
+  }
 
   if (!isOversight) {
     return (
@@ -120,13 +112,47 @@ function ReportsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <p className="label-caps">Oversight</p>
-        <h1 className="mt-1 font-display text-3xl">Reports</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Institution-wide view of request volumes, workload and turnaround for equipment
-          specification.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="label-caps">Oversight</p>
+          <h1 className="mt-1 font-display text-3xl">Reports</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Institution-wide view of request volumes, workload and turnaround for equipment
+            specification.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <div>
+            <Label htmlFor="report-from" className="label-caps mb-1.5 block">
+              Raised from
+            </Label>
+            <Input
+              id="report-from"
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="report-to" className="label-caps mb-1.5 block">
+              Raised to
+            </Label>
+            <Input id="report-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          </div>
+          <Button variant="outline" onClick={exportCsv} disabled={report.total === 0}>
+            <Download />
+            Export CSV
+          </Button>
+          <Button asChild>
+            <Link
+              to="/reports/print"
+              search={compact({ from: from || undefined, to: to || undefined })}
+            >
+              <Printer />
+              Print report
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {requests.isError && (
@@ -137,16 +163,34 @@ function ReportsPage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Total requests" value={String(rows.length)} />
-        <Stat label="Open" value={String(openCount)} hint="Awaiting manager or CICT action" />
-        <Stat label="Approved specifications" value={String(approved)} />
+        <Stat label="Total requests" value={String(report.total)} />
+        <Stat label="Open" value={String(report.open)} hint="Awaiting manager or CICT action" />
         <Stat
-          label="Average turnaround"
-          value={turnaround ? `${turnaround.days.toFixed(1)} d` : "—"}
+          label="In fulfilment"
+          value={String(report.inFulfilment)}
+          hint="Approved, through procurement, stores and verification"
+        />
+        <Stat label="Completed" value={String(report.completed)} hint="Verified and closed" />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Stat
+          label="Manager turnaround"
+          value={formatDays(report.managerTurnaround)}
+          hint="Submission to manager decision"
+        />
+        <Stat
+          label="CICT turnaround"
+          value={formatDays(report.cictTurnaround)}
+          hint="Manager decision to CICT decision"
+        />
+        <Stat
+          label="End-to-end approval"
+          value={formatDays(report.totalTurnaround)}
           hint={
-            turnaround
-              ? `Across ${turnaround.count} completed requests`
-              : "No completed requests yet"
+            report.totalTurnaround
+              ? `Across ${report.totalTurnaround.count} decided requests`
+              : "No decided requests yet"
           }
         />
       </div>
@@ -155,23 +199,32 @@ function ReportsPage() {
         <section className="surface p-6">
           <h2 className="font-display text-xl">By status</h2>
           <div className="mt-4">
-            <Bars data={byStatus.map(([s, n]) => [STATUS_LABEL[s as RequestStatus] ?? s, n])} />
+            <Bars
+              data={report.byStatus.map(([s, n]) => [STATUS_LABEL[s as RequestStatus] ?? s, n])}
+            />
           </div>
         </section>
         <section className="surface p-6">
           <h2 className="font-display text-xl">By priority</h2>
           <div className="mt-4">
-            <Bars data={byPriority.map(([p, n]) => [p.charAt(0).toUpperCase() + p.slice(1), n])} />
+            <Bars
+              data={report.byPriority.map(([p, n]) => [p.charAt(0).toUpperCase() + p.slice(1), n])}
+            />
+          </div>
+        </section>
+        <section className="surface p-6">
+          <h2 className="font-display text-xl">Demand by organisational unit</h2>
+          <div className="mt-4">
+            <Bars data={report.byUnit} />
+          </div>
+        </section>
+        <section className="surface p-6">
+          <h2 className="font-display text-xl">Equipment requested (units)</h2>
+          <div className="mt-4">
+            <Bars data={report.byCategory} />
           </div>
         </section>
       </div>
-
-      <section className="surface p-6">
-        <h2 className="font-display text-xl">Demand by organisational unit</h2>
-        <div className="mt-4">
-          <Bars data={byUnit} />
-        </div>
-      </section>
 
       <section className="surface p-6">
         <h2 className="font-display text-xl">Most recent requests</h2>
@@ -187,7 +240,7 @@ function ReportsPage() {
               </tr>
             </thead>
             <tbody>
-              {rows.slice(0, 15).map((r) => (
+              {report.rows.slice(0, 15).map((r) => (
                 <tr key={r.id} className="border-b border-border/60">
                   <td className="py-2 pr-3 font-mono text-xs">{r.reference}</td>
                   <td className="py-2 pr-3">{r.title || "Untitled"}</td>
@@ -200,10 +253,10 @@ function ReportsPage() {
                   </td>
                 </tr>
               ))}
-              {rows.length === 0 ? (
+              {report.total === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-6 text-center text-muted-foreground">
-                    No requests recorded yet.
+                    No requests recorded for this period.
                   </td>
                 </tr>
               ) : null}

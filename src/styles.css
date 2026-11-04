@@ -428,14 +428,59 @@
 @media print {
   header,
   footer,
-  nav {
+  nav,
+  aside,
+  [data-sonner-toaster] {
     display: none !important;
+  }
+  html,
+  body,
+  .min-h-screen {
+    background: #fff !important;
   }
   main {
     padding: 0 !important;
     max-width: none !important;
+    min-height: 0 !important;
+    animation: none !important;
   }
-  @page {
-    margin: 14mm;
+  /* Keep document rules and shading when printed. */
+  main,
+  main * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
+  .print-sheet {
+    font-size: 12px;
+  }
+  /* Repeat table headings on every page and never split a row across pages. */
+  .doc-table thead {
+    display: table-header-group;
+  }
+  .doc-table tr {
+    break-inside: avoid;
+  }
+  .doc-section h2 {
+    break-after: avoid;
+  }
+}
+
+/* A4 pages, with the system name and page numbers in the bottom margin. */
+@page {
+  size: A4;
+  margin: 15mm 14mm 18mm;
+  @bottom-left {
+    content: "UNZA CICT Equipment Specification System";
+    font-size: 8pt;
+    color: #555;
+  }
+  @bottom-right {
+    content: "Page " counter(page) " of " counter(pages);
+    font-size: 8pt;
+    color: #555;
+  }
+}
+
+@page :first {
+  margin-top: 12mm;
 }

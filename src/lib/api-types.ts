@@ -221,11 +221,20 @@ export type AuditLogResponse = {
   id: string;
   actorId: string | null;
   actorEmail: string | null;
+  actorName: string | null;
   entityType: string;
   entityId: string | null;
   action: string;
   details: string | null;
+  ipAddress: string | null;
   createdAt: string;
+};
+
+export type AuditLogPageResponse = {
+  items: AuditLogResponse[];
+  total: number;
+  page: number;
+  size: number;
 };
 
 export type NotificationResponse = {

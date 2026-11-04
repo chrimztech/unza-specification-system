@@ -10,6 +10,7 @@ import type {
   UserResponse,
 } from "@/lib/api-types";
 import { useAuth } from "@/hooks/useAuth";
+import { uniqueId } from "@/lib/utils";
 import { useLookup } from "@/hooks/useLookups";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,7 +89,7 @@ type Item = {
 
 function emptyItem(): Item {
   return {
-    key: crypto.randomUUID(),
+    key: uniqueId(),
     category_id: "",
     quantity: 1,
     purpose: "",

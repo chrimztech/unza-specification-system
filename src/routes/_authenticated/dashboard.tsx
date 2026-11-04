@@ -158,7 +158,7 @@ function RequestTable({
 }
 
 function Dashboard() {
-  const { userId, isCict, isOversight, displayName } = useAuth();
+  const { userId, isCict, isOversight, displayName, hasRole } = useAuth();
   const requests = useRequests();
 
   const mine = useMemo(
@@ -187,6 +187,27 @@ function Dashboard() {
         : [],
     [requests.data, isOversight],
   );
+  // Downstream stage queues: each role holder (and administrators) sees the requests waiting on them.
+  const isAdmin = hasRole("admin");
+  const seesProcurement = hasRole("procurement") || isAdmin;
+  const seesStores = hasRole("stores") || isAdmin;
+  const seesVerification = hasRole("cict_support") || isAdmin;
+  const stageQueue = useMemo(() => {
+    const all = requests.data ?? [];
+    const oldestFirst = (a: RequestResponse, b: RequestResponse) =>
+      a.createdAt < b.createdAt ? -1 : 1;
+    return {
+      procurement: seesProcurement
+        ? all
+            .filter((r) => ["approved", "procurement", "return_required"].includes(r.status))
+            .sort(oldestFirst)
+        : null,
+      stores: seesStores ? all.filter((r) => r.status === "purchased").sort(oldestFirst) : null,
+      verification: seesVerification
+        ? all.filter((r) => r.status === "in_stores").sort(oldestFirst)
+        : null,
+    };
+  }, [requests.data, seesProcurement, seesStores, seesVerification]);
   const recentMine = useMemo(
     () => [...mine].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 8),
     [mine],
@@ -300,6 +321,54 @@ function Dashboard() {
                 </Link>
               </Button>
             ) : undefined
+          }
+        />
+      )}
+
+      {stageQueue.procurement && (
+        <RequestTable
+          rows={stageQueue.procurement}
+          title="Procurement queue"
+          description="Approved specifications to source, quotations in progress, and returns to re-source"
+          empty="Nothing waiting on procurement"
+          action={
+            <Button asChild size="sm" variant="outline">
+              <Link to="/procurement">
+                Open procurement <ArrowRight />
+              </Link>
+            </Button>
+          }
+        />
+      )}
+
+      {stageQueue.stores && (
+        <RequestTable
+          rows={stageQueue.stores}
+          title="Awaiting receipt in stores"
+          description="Purchased equipment to be received and recorded by stores"
+          empty="Nothing waiting on stores"
+          action={
+            <Button asChild size="sm" variant="outline">
+              <Link to="/stores">
+                Open stores <ArrowRight />
+              </Link>
+            </Button>
+          }
+        />
+      )}
+
+      {stageQueue.verification && (
+        <RequestTable
+          rows={stageQueue.verification}
+          title="Awaiting CICT verification"
+          description="Equipment in stores to be checked against the approved specification"
+          empty="Nothing waiting on verification"
+          action={
+            <Button asChild size="sm" variant="outline">
+              <Link to="/verification">
+                Open verification <ArrowRight />
+              </Link>
+            </Button>
           }
         />
       )}
